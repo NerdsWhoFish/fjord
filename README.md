@@ -5,17 +5,18 @@ Review GitHub pull requests with semantic code navigation and optional AI assist
 Keep the diff, surrounding code, and your review together.
 Follow symbols to their definitions or implementations, inspect references, and submit reviews to GitHub.
 This is an early local application.
-Go is the first language supported for semantic navigation; the UI displays diffs in other languages too.
+Semantic navigation supports Go and Terraform; the UI displays diffs in other languages too.
 
 ## Run
 
-Requirements: Go 1.27+, Node.js 22+, GitHub CLI, and `gopls` on `PATH`.
+Requirements: Go 1.27+, Node.js 22+, GitHub CLI, and `gopls` for Go navigation or `tofu-ls` for Terraform navigation on `PATH`.
 Navigation requires macOS `sandbox-exec` or Linux Bubblewrap (`bwrap` with user namespaces enabled).
 Fjord refuses to run an unconfined language server.
 
 ```sh
 gh auth login --hostname github.com
 go install golang.org/x/tools/gopls@v0.24.0
+go install github.com/opentofu/tofu-ls@v0.5.3
 make build
 ./bin/fjord
 ```
@@ -33,7 +34,7 @@ To browse from another device on a trusted LAN, bind all interfaces and specify 
 Replace the example IP with your server's LAN address, then open the printed URL.
 There is no Fjord login; connected users act through the server's GitHub CLI identity.
 
-`make check` runs frontend tests/build, Go vet, race tests, real sandboxed `gopls` integration tests, and formatting checks.
+`make check` requires both language servers and runs frontend tests/build, Go vet, race tests, real sandboxed `gopls` and `tofu-ls` integration tests, and formatting checks.
 `make install` checks and installs the embedded native application to `~/bin/fjord`.
 Make targets disable inherited Go workspaces.
 
@@ -41,8 +42,8 @@ Make targets disable inherited Go workspaces.
 
 - Load PR metadata and paginated file diffs using your GitHub CLI identity.
 - Read code at exact revisions. Deleted lines use the merge base; renamed files use their previous path on the left side.
-- Navigate definitions, implementations, references, and hover information with `gopls` in isolated revision workspaces.
-- Draft line comments and explicitly submit a comment review, approval, or request for changes. Submission checks the head and merge-base SHAs and pins GitHub's `commit_id` to the reviewed head.
+- Follow symbols using contextual definition, reference, and type-information actions in isolated revision workspaces. Go also supports implementation navigation.
+- Draft single-line or multiline comments and explicitly submit a comment review, approval, or request for changes. Submission checks the head and merge-base SHAs and pins GitHub's `commit_id` to the reviewed head.
 - Read inline review comments and reply to them.
 - Ask an optional AI provider about context you explicitly choose to send.
 
@@ -50,9 +51,12 @@ GitHub can receive a push after the freshness check.
 Branch protection remains responsible for dismissing stale approvals.
 GitHub remains the source of truth.
 
-Use the **+** in the diff's line-number gutter to comment on an added, deleted, or context line.
+Hover or activate a symbol to open its code actions.
+Use the line-number gutter to select a line or drag a range, then choose the comment action.
+Shift-click extends a selection without dragging.
+Multiline comments stay on one side within one diff hunk; ranges cannot span omitted code.
 Choose **Add to review**, then submit the accumulated drafts from the **Review** panel.
-The **Theme** selector offers System, Light, Dark, and Dracula on both the start page and review workspace.
+The hamburger **Settings** menu contains the **Theme** selector, offering System, Light, Dark, and Dracula.
 System follows your OS preference; an explicit choice is remembered and synchronized across browser tabs.
 
 Changed files appear in an expandable folder tree with status icons, full-path tooltips, and viewed markers.
@@ -62,19 +66,25 @@ Diffs and source panes include syntax highlighting for Go, JavaScript/TypeScript
 Highlighting preserves symbol-click positions and runs in a disposable browser worker.
 Unknown formats remain plain text; inputs over 250,000 characters or expensive grammars also fall back to plain text so review controls remain responsive.
 Diff highlighting uses separate base/head text within each hunk; omitted context can limit grammar accuracy, while full source provides continuous lexical context.
-Syntax colors do not imply language-server support: semantic navigation currently supports Go.
+Syntax colors do not imply language-server support: semantic navigation currently supports Go and Terraform.
 
 ## Navigation limits
 
-The first version supports a Go module at the repository root with standard-library, local, or vendored dependencies.
+The language server is selected from the file being inspected rather than initialized as Go for every repository.
+Go navigation uses the nearest Go module with standard-library, local, or vendored dependencies.
 Network access, CGO, automatic toolchain downloads, and VCS dependency fetching are disabled.
 Missing dependencies are reported rather than presenting incomplete results as complete.
+
+Terraform navigation uses `tofu-ls` to index configuration and local modules without running `tofu init`.
+Supported Terraform files are `.tf`, `.tf.json`, `.tfvars`, `.tfvars.json`, and `.tofu`.
+Provider downloads and execution are unavailable in the sandbox.
+Remote modules and provider-specific schema information can therefore remain unresolved.
 
 Archive extraction rejects symlinks, hardlinks, special files, traversal, and oversized archives.
 The source pane cannot open files outside the extracted tree, including standard-library and dependency-cache files.
 Workspaces are temporary, bounded, and removed at shutdown.
 
-TypeScript, multi-module projects, dependency provisioning, hosted accounts, check-run views, issue comments, and thread resolution remain future work.
+Python and TypeScript navigation, dependency provisioning, hosted accounts, check-run views, issue comments, and thread resolution remain future work.
 The GitHub PR link provides actions not yet exposed here.
 
 ## AI assistance
@@ -118,8 +128,8 @@ The Go packages separate GitHub, navigation, AI transport, telemetry, and HTTP b
 `web/` contains React/TypeScript.
 Theme palettes live in `web/src/theme.css`; components consume semantic CSS variables for surfaces, controls, diff states, file-tree states, and syntax tokens.
 To add a named theme, define its palette, extend the theme choices in `web/src/theme.ts` and `web/src/ThemeToggle.tsx`, and include its contrast cases in `web/src/theme.test.ts`.
-`make check` and CI require real `gopls` and a supported sandbox.
-`make test` runs Go unit tests; use `FJORD_TEST_GOPLS=1 make test` to include language-server integration tests.
+`make check` and CI require real `gopls`, `tofu-ls`, and a supported sandbox.
+`make test` runs Go unit tests; use `FJORD_TEST_GOPLS=1 FJORD_TEST_TOFU_LS=1 make test` to include language-server integration tests.
 
 Goblin currently provides a foundation and UI concepts, not an implemented PR engine.
 Plannotator's edit-approval lifecycle differs from GitHub reviews.

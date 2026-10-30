@@ -3,7 +3,7 @@ import { api } from "./api";
 import { Assistant } from "./Assistant";
 import { CodePanel } from "./CodePanel";
 import { FileTree } from "./FileTree";
-import { ThemeToggle } from "./ThemeToggle";
+import { SettingsMenu } from "./SettingsMenu";
 import { demoBaseSource, demoPR, demoSource, demoThreads } from "./demo";
 import { emptyDraft, readDraft, ReviewPanel, writeDraft } from "./ReviewPanel";
 import type { ReviewDraft } from "./ReviewPanel";
@@ -241,14 +241,16 @@ export function App() {
       if (epoch.current === requestEpoch) setNavigating(false);
     }
   }
-  async function navigate() {
-    if (!pr || !selection) return;
+  async function navigate(nextSelection = selection, nextMethod = method) {
+    if (!pr || !nextSelection) return;
+    setSelection(nextSelection);
+    setMethod(nextMethod);
     const requestEpoch = ++epoch.current;
     setNavigating(true);
     setError("");
     setNavResult(undefined);
     try {
-      let workspace = workspaces.current.get(selection.sha);
+      let workspace = workspaces.current.get(nextSelection.sha);
       if (!workspace) {
         workspace = demo
           ? "demo"
@@ -256,10 +258,10 @@ export function App() {
               await api<{ id: string }>("workspace", {
                 owner: pr.owner,
                 repo: pr.repo,
-                sha: selection.sha,
+                sha: nextSelection.sha,
               })
             ).id;
-        workspaces.current.set(selection.sha, workspace);
+        workspaces.current.set(nextSelection.sha, workspace);
       }
       const demoSymbol: Record<string, [string, number]> = {
         backoff: ["internal/harbor/backoff.go", 5],
@@ -267,11 +269,11 @@ export function App() {
         Connector: ["internal/harbor/connect.go", 4],
         Open: ["internal/harbor/connect.go", 5],
       };
-      const target = demoSymbol[selection.word];
+      const target = demoSymbol[nextSelection.word];
       const result: NavigationResult = demo
         ? {
             locations:
-              method === "hover" || !target
+              nextMethod === "hover" || !target
                 ? []
                 : [
                     {
@@ -279,30 +281,30 @@ export function App() {
                       line: target[1],
                       character: 0,
                       endLine: target[1],
-                      endCharacter: selection.word.length,
+                      endCharacter: nextSelection.word.length,
                     },
                   ],
             hover:
-              method === "hover"
-                ? `Illustrative type information for ${selection.word}. Open a real PR for language-server results.`
+              nextMethod === "hover"
+                ? `Illustrative type information for ${nextSelection.word}. Open a real PR for language-server results.`
                 : "",
           }
         : await api<NavigationResult>("navigate", {
             id: workspace,
-            path: selection.path,
-            method,
-            line: selection.line - 1,
-            character: selection.character,
+            path: nextSelection.path,
+            method: nextMethod,
+            line: nextSelection.line - 1,
+            character: nextSelection.character,
           });
       if (epoch.current !== requestEpoch) return;
       setNavResult(result);
       setNavWorkspace(workspace);
-      setNavSHA(selection.sha);
+      setNavSHA(nextSelection.sha);
       if (result.locations?.length === 1)
         await showLocation(
           result.locations[0],
           workspace,
-          selection.sha,
+          nextSelection.sha,
           requestEpoch,
         );
     } catch (error) {
@@ -328,12 +330,16 @@ export function App() {
         headSHA: pr.headSHA,
         event: draft.event,
         body: draft.body,
-        comments: draft.comments.map(({ path, line, side, body }) => ({
-          path,
-          line,
-          side,
-          body,
-        })),
+        comments: draft.comments.map(
+          ({ path, line, side, body, startLine, startSide }) => ({
+            path,
+            line,
+            side,
+            body,
+            start_line: startLine,
+            start_side: startSide,
+          }),
+        ),
       });
       writeDraft(pr, false, emptyDraft());
       if (prEpoch.current === currentPR) {
@@ -408,7 +414,7 @@ export function App() {
       <div className="welcome">
         <header>
           <Brand />
-          <ThemeToggle />
+          <SettingsMenu />
         </header>
         <main className="welcome-main">
           <div className="welcome-copy">
@@ -547,7 +553,7 @@ export function App() {
             </p>
           </div>
           <div className="header-actions">
-            <ThemeToggle />
+            <SettingsMenu />
             {pr.url && (
               <a
                 className="button"
@@ -695,8 +701,8 @@ export function App() {
                 {navResult.hover && <pre>{navResult.hover}</pre>}
                 {!navResult.hover && !navResult.locations?.length && (
                   <p>
-                    No results from the language server. The symbol may be
-                    external, unresolved, or unsupported.
+                    {navResult.message ||
+                      "No results from the language server. The symbol may be external, unresolved, or unsupported."}
                   </p>
                 )}
                 {navResult.locations?.map((location, i) => (

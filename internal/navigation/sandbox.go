@@ -18,73 +18,30 @@ import (
 	"time"
 )
 
-func startServer(ctx context.Context, dir, root string) (*rpcClient, error) {
-	gopls, err := exec.LookPath("gopls")
+func startLanguageServer(ctx context.Context, dir, root, language string) (*rpcClient, map[string]bool, error) {
+	config, err := configureLanguage(ctx, dir, root, language)
 	if err != nil {
-		return nil, errors.New("gopls is not installed; install golang.org/x/tools/gopls")
+		return nil, nil, err
 	}
-	gopls, err = filepath.EvalSymlinks(gopls)
+	cmd, stop, err := sandboxCommand(dir, root, config.executable, config.runtimeRoot, config.env, "serve")
 	if err != nil {
-		return nil, errors.New("cannot resolve gopls executable")
-	}
-	goBin, err := exec.LookPath("go")
-	if err != nil {
-		return nil, errors.New("Go is not installed")
-	}
-	goBin, err = filepath.EvalSymlinks(goBin)
-	if err != nil {
-		return nil, errors.New("cannot resolve Go executable")
-	}
-	for _, name := range []string{"home", "cache", "tmp", "go", "gopls-cache"} {
-		if err := os.Mkdir(filepath.Join(dir, name), 0700); err != nil {
-			return nil, errors.New("cannot create isolated Go cache")
-		}
-	}
-	env := []string{
-		"PATH=" + filepath.Dir(goBin) + ":/usr/bin:/bin",
-		"HOME=" + filepath.Join(dir, "home"),
-		"TMPDIR=" + filepath.Join(dir, "tmp"),
-		"GOTMPDIR=" + filepath.Join(dir, "tmp"),
-		"GOCACHE=" + filepath.Join(dir, "cache"),
-		"GOPATH=" + filepath.Join(dir, "go"),
-		"GOPLSCACHE=" + filepath.Join(dir, "gopls-cache"),
-		"GOENV=off", "GOWORK=off", "GOTOOLCHAIN=local", "GOPROXY=off", "GOSUMDB=off", "GOVCS=*:off", "CGO_ENABLED=0", "GOTELEMETRY=off", "GOMAXPROCS=2", "GOMEMLIMIT=512MiB",
-	}
-	probeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
-	defer cancel()
-	probe := exec.CommandContext(probeCtx, goBin, "env", "GOROOT")
-	probe.Env = env
-	probe.Dir = dir
-	out, err := probe.Output()
-	if err != nil {
-		return nil, errors.New("cannot locate Go toolchain")
-	}
-	goRoot, err := filepath.EvalSymlinks(strings.TrimSpace(string(out)))
-	if err != nil {
-		return nil, errors.New("cannot resolve Go toolchain")
-	}
-	if err := validatePackages(ctx, dir, root, goBin, goRoot, env); err != nil {
-		return nil, err
-	}
-	cmd, stop, err := sandboxCommand(dir, root, gopls, goRoot, env, "serve")
-	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 	stdout, err := cmd.StdoutPipe()
 	if err != nil {
 		stop()
-		return nil, errors.New("cannot open language-server output")
+		return nil, nil, errors.New("cannot open language-server output")
 	}
 	stdin, err := cmd.StdinPipe()
 	if err != nil {
 		stop()
-		return nil, errors.New("cannot open language-server input")
+		return nil, nil, errors.New("cannot open language-server input")
 	}
-	// gopls diagnostics may contain source, file paths and module names.
+	// Language-server diagnostics may contain source, paths and module names.
 	cmd.Stderr = io.Discard
 	if err := cmd.Start(); err != nil {
 		stop()
-		return nil, fmt.Errorf("cannot start isolated language server: %w", ErrSandbox)
+		return nil, nil, fmt.Errorf("cannot start isolated %s language server: %w", config.name, ErrSandbox)
 	}
 	exited := make(chan struct{})
 	go func() { _ = cmd.Wait(); close(exited) }()
@@ -96,7 +53,9 @@ func startServer(ctx context.Context, dir, root string) (*rpcClient, error) {
 	initCtx, cancelInit := context.WithTimeout(ctx, 30*time.Second)
 	defer cancelInit()
 	uri := (&url.URL{Scheme: "file", Path: root}).String()
-	var initialized json.RawMessage
+	var initialized struct {
+		Capabilities map[string]json.RawMessage `json:"capabilities"`
+	}
 	err = client.call(initCtx, "initialize", map[string]any{
 		"processId": nil, "rootUri": uri,
 		"workspaceFolders": []map[string]string{{"uri": uri, "name": "revision"}},
@@ -104,17 +63,104 @@ func startServer(ctx context.Context, dir, root string) (*rpcClient, error) {
 			"general":      map[string]any{"positionEncodings": []string{"utf-16"}},
 			"textDocument": map[string]any{"hover": map[string]any{"contentFormat": []string{"plaintext"}}},
 		},
-		"initializationOptions": map[string]any{"staticcheck": false, "checkBugReports": false, "telemetryPrompt": false},
+		"initializationOptions": config.options,
 	}, &initialized)
 	if err != nil {
 		client.close()
-		return nil, fmt.Errorf("isolated gopls initialization failed: %w", err)
+		return nil, nil, fmt.Errorf("isolated %s initialization failed: %w", config.name, err)
 	}
 	if err = client.notify("initialized", map[string]any{}); err != nil {
 		client.close()
-		return nil, err
+		return nil, nil, err
 	}
-	return client, nil
+	capabilities := make(map[string]bool)
+	for _, method := range []string{"definition", "implementation", "references", "hover"} {
+		value := bytes.TrimSpace(initialized.Capabilities[method+"Provider"])
+		capabilities[method] = bytes.Equal(value, []byte("true")) || (len(value) > 0 && value[0] == '{')
+	}
+	return client, capabilities, nil
+}
+
+type runtimeConfiguration struct {
+	executable  string
+	runtimeRoot string
+	name        string
+	env         []string
+	options     map[string]any
+}
+
+func configureLanguage(ctx context.Context, dir, root, language string) (runtimeConfiguration, error) {
+	config := runtimeConfiguration{runtimeRoot: dir}
+	for _, name := range []string{"bin", "home", "cache", "tmp", "go", "gopls-cache"} {
+		if err := os.MkdirAll(filepath.Join(dir, name), 0700); err != nil {
+			return config, errors.New("cannot create isolated language-server cache")
+		}
+	}
+	config.env = []string{
+		"HOME=" + filepath.Join(dir, "home"), "TMPDIR=" + filepath.Join(dir, "tmp"), "XDG_CACHE_HOME=" + filepath.Join(dir, "cache"),
+		"GOTELEMETRY=off", "GOMAXPROCS=2", "GOMEMLIMIT=512MiB",
+	}
+	if language == "terraform" {
+		executable, err := exec.LookPath("tofu-ls")
+		if err != nil {
+			return config, errors.New("OpenTofu/Terraform navigation requires tofu-ls on the Fjord server's PATH")
+		}
+		config.executable, err = filepath.EvalSymlinks(executable)
+		if err != nil {
+			return config, errors.New("cannot resolve tofu-ls executable")
+		}
+		config.name = "tofu-ls"
+		// An empty private executable directory prevents discovery of tofu or
+		// terraform. Static LSP navigation needs neither CLI nor provider execution.
+		config.env = append(config.env, "PATH="+filepath.Join(dir, "bin"), "TF_IN_AUTOMATION=1", "CHECKPOINT_DISABLE=1")
+		config.options = map[string]any{
+			"experimentalFeatures": map[string]bool{"validateOnSave": false},
+			"validation":           map[string]bool{"enableEnhancedValidation": false},
+		}
+		return config, nil
+	}
+	if language != "go" {
+		return config, errors.New("unsupported language-server runtime")
+	}
+	executable, err := exec.LookPath("gopls")
+	if err != nil {
+		return config, errors.New("Go navigation requires gopls on the Fjord server's PATH")
+	}
+	config.executable, err = filepath.EvalSymlinks(executable)
+	if err != nil {
+		return config, errors.New("cannot resolve gopls executable")
+	}
+	config.name = "gopls"
+	goBin, err := exec.LookPath("go")
+	if err != nil {
+		return config, errors.New("Go navigation requires an installed Go toolchain")
+	}
+	goBin, err = filepath.EvalSymlinks(goBin)
+	if err != nil {
+		return config, errors.New("cannot resolve Go executable")
+	}
+	config.env = append(config.env,
+		"PATH="+filepath.Dir(goBin)+":/usr/bin:/bin", "GOTMPDIR="+filepath.Join(dir, "tmp"),
+		"GOCACHE="+filepath.Join(dir, "cache"), "GOPATH="+filepath.Join(dir, "go"), "GOPLSCACHE="+filepath.Join(dir, "gopls-cache"),
+		"GOENV=off", "GOWORK=off", "GOTOOLCHAIN=local", "GOPROXY=off", "GOSUMDB=off", "GOVCS=*:off", "CGO_ENABLED=0",
+	)
+	probeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
+	defer cancel()
+	probe := exec.CommandContext(probeCtx, goBin, "env", "GOROOT")
+	probe.Env, probe.Dir = config.env, dir
+	out, err := probe.Output()
+	if err != nil {
+		return config, errors.New("cannot locate Go toolchain")
+	}
+	config.runtimeRoot, err = filepath.EvalSymlinks(strings.TrimSpace(string(out)))
+	if err != nil {
+		return config, errors.New("cannot resolve Go toolchain")
+	}
+	if err := validatePackages(ctx, dir, root, goBin, config.runtimeRoot, config.env); err != nil {
+		return config, err
+	}
+	config.options = map[string]any{"staticcheck": false, "checkBugReports": false, "telemetryPrompt": false}
+	return config, nil
 }
 
 func sandboxCommand(dir, root, executable, goRoot string, env []string, commandArgs ...string) (*exec.Cmd, context.CancelFunc, error) {
@@ -202,7 +248,7 @@ func validatePackages(ctx context.Context, dir, root, goBin, goRoot string, env 
 	cmd.Stdout = &output
 	cmd.Stderr = io.Discard
 	if err := cmd.Run(); err != nil {
-		return errors.New("isolated Go package loading failed; ensure the sandbox works and the repository has a root go.mod")
+		return errors.New("isolated Go package loading failed; check the sandbox and this file's Go module")
 	}
 	decoder := json.NewDecoder(&output)
 	count := 0
@@ -225,7 +271,7 @@ func validatePackages(ctx context.Context, dir, root, goBin, goRoot string, env 
 		}
 	}
 	if count == 0 {
-		return errors.New("no Go packages found; navigation currently requires a Go module at the repository root")
+		return errors.New("no Go packages found in this file's module")
 	}
 	return nil
 }

@@ -6,6 +6,7 @@ import type {
   Selection,
   ThreadComment,
 } from "./types";
+import { commentLineLabel } from "./comment-range";
 
 export interface ReviewDraft {
   comments: DraftComment[];
@@ -136,7 +137,7 @@ export function ReviewPanel({
         <article className="draft-card" key={item.id}>
           <div className="draft-location">
             <code>
-              {item.path}:{item.line}
+              {item.path}:{commentLineLabel(item.line, item.startLine)}
             </code>
             <span>{item.side === "LEFT" ? "base" : "head"}</span>
           </div>
@@ -237,7 +238,9 @@ export function ReviewPanel({
           </div>
           <code className="thread-path">
             {thread.path}
-            {thread.line ? `:${thread.line}` : " (outdated)"}
+            {thread.line
+              ? `:${commentLineLabel(thread.line, thread.startLine)}`
+              : " (outdated)"}
           </code>
           <p>{thread.body}</p>
           <label className="sr-only" htmlFor={`reply-${thread.id}`}>
@@ -281,8 +284,9 @@ export function ReviewPanel({
                 ...draft.comments,
                 {
                   // getRandomValues also works over HTTP on a trusted LAN.
-                  id: Array.from(crypto.getRandomValues(new Uint32Array(4)), (n) =>
-                    n.toString(16).padStart(8, "0"),
+                  id: Array.from(
+                    crypto.getRandomValues(new Uint32Array(4)),
+                    (n) => n.toString(16).padStart(8, "0"),
                   ).join(""),
                   path:
                     pendingComment.side === "LEFT"
@@ -292,6 +296,13 @@ export function ReviewPanel({
                       : pendingComment.path,
                   line: pendingComment.line,
                   side: pendingComment.side,
+                  ...(pendingComment.startLine !== undefined
+                    ? {
+                        startLine: pendingComment.startLine,
+                        startSide:
+                          pendingComment.startSide || pendingComment.side,
+                      }
+                    : {}),
                   body: comment.trim(),
                 },
               ],
@@ -300,7 +311,11 @@ export function ReviewPanel({
           }}
         >
           <div className="dialog-heading">
-            <h2 id="comment-title">Leave a line comment</h2>
+            <h2 id="comment-title">
+              {pendingComment?.startLine
+                ? "Comment on selected lines"
+                : "Leave a line comment"}
+            </h2>
             <button
               type="button"
               className="icon-button"
@@ -311,8 +326,11 @@ export function ReviewPanel({
             </button>
           </div>
           <p className="muted small">
-            {pendingComment?.path}:{pendingComment?.line} /{" "}
-            {pendingComment?.side === "LEFT" ? "base" : "head"}
+            {pendingComment?.path}:
+            {pendingComment
+              ? commentLineLabel(pendingComment.line, pendingComment.startLine)
+              : ""}{" "}
+            / {pendingComment?.side === "LEFT" ? "base" : "head"}
           </p>
           <pre className="selected-code">{pendingComment?.code}</pre>
           <label htmlFor="line-comment">Comment</label>

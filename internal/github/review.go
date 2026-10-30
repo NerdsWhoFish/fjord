@@ -15,7 +15,7 @@ import (
 var ownerPattern = regexp.MustCompile(`^[A-Za-z0-9](?:[A-Za-z0-9-]{0,37}[A-Za-z0-9])?$`)
 var repoPattern = regexp.MustCompile(`^[A-Za-z0-9_.-]{1,100}$`)
 var shaPattern = regexp.MustCompile(`^[0-9a-f]{40}$`)
-var hunkPattern = regexp.MustCompile(`^@@ -(\d+)(?:,\d+)? \+(\d+)(?:,\d+)? @@`)
+var hunkPattern = regexp.MustCompile(`^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@`)
 
 func validSHA(value string) bool { return shaPattern.MatchString(value) }
 
@@ -67,6 +67,11 @@ func validateReview(review Review) error {
 		if !validPath(comment.Path) || comment.Line < 1 || (comment.Side != "LEFT" && comment.Side != "RIGHT") || !validBody(comment.Body) || strings.TrimSpace(comment.Body) == "" {
 			return errors.New("inline comments require a file, positive line, LEFT or RIGHT side, and nonempty body")
 		}
+		if comment.StartLine != 0 || comment.StartSide != "" || comment.startLineSet || comment.startSideSet {
+			if comment.StartLine < 1 || comment.StartLine >= comment.Line || comment.StartSide != comment.Side {
+				return errors.New("multiline comments require start_line before line and matching LEFT or RIGHT start_side and side")
+			}
+		}
 	}
 	return nil
 }
@@ -93,14 +98,18 @@ func (c *Client) Review(ctx context.Context, owner, repo string, number int, rev
 	}
 	for _, comment := range review.Comments {
 		found := false
+		start := comment.StartLine
+		if start == 0 {
+			start = comment.Line
+		}
 		for _, file := range pr.Files {
-			if file.Path == comment.Path && containsLine(file.Patch, comment.Side, comment.Line) {
+			if file.Path == comment.Path && containsRange(file.Patch, comment.Side, start, comment.Line) {
 				found = true
 				break
 			}
 		}
 		if !found {
-			return "", errors.New("an inline comment is outside the current diff; reload and choose a visible diff line")
+			return "", errors.New("an inline comment is outside the current diff; choose visible lines on one side within a single diff hunk")
 		}
 	}
 	input := struct {
@@ -124,35 +133,95 @@ func (c *Client) Review(ctx context.Context, owner, repo string, number int, rev
 }
 
 func containsLine(patch, side string, target int) bool {
-	left, right := 0, 0
+	return containsRange(patch, side, target, target)
+}
+
+func hunkRange(startText, countText string) (int, int, bool) {
+	start, err := strconv.Atoi(startText)
+	if err != nil {
+		return 0, 0, false
+	}
+	count := 1
+	if countText != "" {
+		count, err = strconv.Atoi(countText)
+	}
+	if err != nil || (start == 0 && count != 0) || count > int(^uint(0)>>1)-start {
+		return 0, 0, false
+	}
+	return start, count, true
+}
+
+func containsRange(patch, side string, start, end int) bool {
+	if start < 1 || start > end || (side != "LEFT" && side != "RIGHT") {
+		return false
+	}
+	left, right, leftRemaining, rightRemaining := 0, 0, 0, 0
+	next := start
 	inHunk := false
 	for _, line := range strings.Split(patch, "\n") {
 		if match := hunkPattern.FindStringSubmatch(line); match != nil {
-			left, _ = strconv.Atoi(match[1])
-			right, _ = strconv.Atoi(match[2])
-			inHunk = true
+			var leftOK, rightOK bool
+			left, leftRemaining, leftOK = hunkRange(match[1], match[2])
+			right, rightRemaining, rightOK = hunkRange(match[3], match[4])
+			inHunk = leftOK && rightOK
+			// A new hunk cannot complete a range started in an earlier hunk,
+			// even when the two visible endpoints have adjacent line numbers.
+			next = start
 			continue
 		}
-		if !inHunk || line == "" {
+		if !inHunk {
 			continue
 		}
+		if line == "\\ No newline at end of file" {
+			continue
+		}
+		if line == "" {
+			inHunk = false
+			continue
+		}
+		selectedLine := 0
 		switch line[0] {
 		case '-':
-			if side == "LEFT" && left == target {
-				return true
+			if leftRemaining < 1 {
+				inHunk = false
+				continue
+			}
+			if side == "LEFT" {
+				selectedLine = left
 			}
 			left++
+			leftRemaining--
 		case '+':
-			if side == "RIGHT" && right == target {
-				return true
+			if rightRemaining < 1 {
+				inHunk = false
+				continue
+			}
+			if side == "RIGHT" {
+				selectedLine = right
 			}
 			right++
+			rightRemaining--
 		case ' ':
-			if (side == "LEFT" && left == target) || (side == "RIGHT" && right == target) {
-				return true
+			if leftRemaining < 1 || rightRemaining < 1 {
+				inHunk = false
+				continue
+			}
+			selectedLine = left
+			if side == "RIGHT" {
+				selectedLine = right
 			}
 			left++
 			right++
+			leftRemaining--
+			rightRemaining--
+		default:
+			inHunk = false
+		}
+		if selectedLine == next {
+			if next == end {
+				return true
+			}
+			next++
 		}
 	}
 	return false
@@ -166,13 +235,15 @@ func (c *Client) Comments(ctx context.Context, owner, repo string, number int) (
 	bodyBytes := 0
 	for page := 1; page <= maxItems/pageSize; page++ {
 		var entries []struct {
-			ID   int64  `json:"id"`
-			Body string `json:"body"`
-			Path string `json:"path"`
-			Line int    `json:"line"`
-			Side string `json:"side"`
-			URL  string `json:"html_url"`
-			User struct {
+			ID        int64  `json:"id"`
+			Body      string `json:"body"`
+			Path      string `json:"path"`
+			Line      int    `json:"line"`
+			Side      string `json:"side"`
+			StartLine int    `json:"start_line"`
+			StartSide string `json:"start_side"`
+			URL       string `json:"html_url"`
+			User      struct {
 				Login string `json:"login"`
 			} `json:"user"`
 		}
@@ -185,7 +256,7 @@ func (c *Client) Comments(ctx context.Context, owner, repo string, number int) (
 			if bodyBytes > maxResponse {
 				return nil, errors.New("review discussion exceeds the 16 MiB limit; read it on GitHub")
 			}
-			comments = append(comments, ThreadComment{ID: entry.ID, Body: entry.Body, Path: entry.Path, Line: entry.Line, Side: entry.Side, Author: entry.User.Login, URL: entry.URL})
+			comments = append(comments, ThreadComment{ID: entry.ID, Body: entry.Body, Path: entry.Path, Line: entry.Line, Side: entry.Side, StartLine: entry.StartLine, StartSide: entry.StartSide, Author: entry.User.Login, URL: entry.URL})
 		}
 		if len(comments) > maxItems || (hasNext(headers) && page == maxItems/pageSize) {
 			return nil, errors.New("review comments exceed the supported limit; read the remaining discussion on GitHub")

@@ -113,7 +113,7 @@ func (c *rpcClient) call(ctx context.Context, method string, params, result any)
 		if ctx.Err() != nil {
 			return ctx.Err()
 		}
-		return errors.New("language server stopped; check that gopls and the platform sandbox are installed")
+		return errors.New("language server stopped; check the selected language server and platform sandbox")
 	case message := <-ch:
 		if message.Error != nil {
 			return fmt.Errorf("language server rejected navigation (code %d); dependencies may be unavailable in the isolated workspace", message.Error.Code)

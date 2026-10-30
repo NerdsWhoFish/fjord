@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { linePosition, parsePatch, tokenize } from "./diff";
 import { SyntaxText } from "./SyntaxText";
 import { useSyntax } from "./useSyntax";
@@ -11,6 +11,12 @@ import type {
   SourceView,
 } from "./types";
 import { pageRows, sourceWindow } from "./window";
+import { ContextActions } from "./ContextActions";
+import type { ActionAnchor } from "./ContextActions";
+import { commentRange, indexCommentLines, rangeFields } from "./comment-range";
+import type { CommentRange } from "./comment-range";
+import { useCommentRange } from "./useCommentRange";
+import "./code-actions.css";
 
 interface Props {
   pr: PullRequest;
@@ -21,7 +27,7 @@ interface Props {
   method: Method;
   onMethod: (method: Method) => void;
   onSelect: (selection: Selection) => void;
-  onNavigate: () => void;
+  onNavigate: (selection?: Selection, method?: Method) => void;
   onSource: (side: "LEFT" | "RIGHT") => void;
   onCloseSource: () => void;
   onComment: (selection: Selection) => void;
@@ -31,11 +37,18 @@ interface Props {
 function Tokens({
   code,
   spans,
-  onSelect,
+  onIntent,
+  onLeave,
 }: {
   code: string;
   spans?: HighlightSpan[];
-  onSelect: (word: string, column: number) => void;
+  onIntent: (
+    element: HTMLElement,
+    word: string,
+    column: number,
+    intent: "hover" | "focus" | "activate",
+  ) => void;
+  onLeave: () => void;
 }) {
   if (code.length > 4096)
     return (
@@ -67,8 +80,53 @@ function Tokens({
             type="button"
             className="code-token"
             key={i}
-            onClick={() => onSelect(token.text, token.column)}
+            onPointerEnter={(event) => {
+              if (event.pointerType === "mouse")
+                onIntent(
+                  event.currentTarget,
+                  token.text,
+                  token.column,
+                  "hover",
+                );
+            }}
+            onPointerLeave={onLeave}
+            onFocus={(event) => {
+              if (event.currentTarget.matches(":focus-visible"))
+                onIntent(
+                  event.currentTarget,
+                  token.text,
+                  token.column,
+                  "focus",
+                );
+            }}
+            onBlur={(event) => {
+              if (
+                !(event.relatedTarget instanceof Element) ||
+                !event.relatedTarget.closest(".code-context-actions")
+              )
+                onLeave();
+            }}
+            onClick={(event) =>
+              onIntent(
+                event.currentTarget,
+                token.text,
+                token.column,
+                "activate",
+              )
+            }
+            onKeyDown={(event) => {
+              if (["ArrowDown", "Enter", " "].includes(event.key)) {
+                event.preventDefault();
+                onIntent(
+                  event.currentTarget,
+                  token.text,
+                  token.column,
+                  "activate",
+                );
+              }
+            }}
             aria-label={`Inspect ${token.text}`}
+            aria-haspopup="dialog"
           >
             <SyntaxText text={token.text} start={token.column} spans={spans} />
           </button>
@@ -88,10 +146,8 @@ function Tokens({
 export function CodePanel({
   pr,
   file,
-  selection,
   source,
   busy,
-  method,
   onMethod,
   onSelect,
   onNavigate,
@@ -104,11 +160,115 @@ export function CodePanel({
   const diffPanel = useRef<HTMLDivElement>(null);
   const [diffPage, setDiffPage] = useState(0);
   const [sourceStart, setSourceStart] = useState(0);
+  const [actions, setActions] = useState<ActionAnchor>();
+  const actionRef = useRef<ActionAnchor | undefined>(undefined);
+  const openTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
+    undefined,
+  );
+  const suppressFocus = useRef(false);
   const sourceLines = useMemo(
     () => source?.content.split("\n") || [],
     [source?.content],
   );
   const lines = useMemo(() => parsePatch(file.patch || ""), [file.patch]);
+  const indexed = useMemo(() => indexCommentLines(lines), [lines]);
+  const cancelTimers = useCallback(() => {
+    clearTimeout(openTimer.current);
+    clearTimeout(closeTimer.current);
+  }, []);
+  const closeActions = useCallback(
+    (restoreFocus = false) => {
+      cancelTimers();
+      const current = actionRef.current;
+      actionRef.current = undefined;
+      setActions(undefined);
+      if (restoreFocus && current?.element.isConnected) {
+        suppressFocus.current = true;
+        current.element.focus({ preventScroll: true });
+        setTimeout(() => {
+          suppressFocus.current = false;
+        }, 0);
+      }
+    },
+    [cancelTimers],
+  );
+  const holdActions = useCallback(() => {
+    clearTimeout(closeTimer.current);
+  }, []);
+  const leaveActions = useCallback(() => {
+    clearTimeout(openTimer.current);
+    if (
+      actionRef.current?.activated ||
+      actionRef.current?.pinned ||
+      document.activeElement?.closest(".code-context-actions")
+    )
+      return;
+    clearTimeout(closeTimer.current);
+    closeTimer.current = setTimeout(() => closeActions(), 350);
+  }, [closeActions]);
+  function showActions(next: ActionAnchor) {
+    cancelTimers();
+    actionRef.current = next;
+    setActions(next);
+  }
+  function rangeSelection(range: CommentRange): Selection {
+    return {
+      path:
+        range.last.side === "LEFT" ? file.previousPath || file.path : file.path,
+      ...rangeFields(range),
+      character: 0,
+      word: "",
+      code: range.code,
+      sha: range.last.side === "LEFT" ? pr.baseSHA : pr.headSHA,
+    };
+  }
+  const range = useCommentRange(
+    indexed,
+    closeActions,
+    (selected, element, activated) => {
+      showActions({
+        element,
+        selection: rangeSelection(selected),
+        commentable: true,
+        activated,
+        pinned: true,
+      });
+    },
+    `${pr.owner}/${pr.repo}/${pr.baseSHA}/${pr.headSHA}/${file.path}`,
+  );
+  function symbolIntent(
+    element: HTMLElement,
+    selected: Selection,
+    commentable: boolean,
+    intent: "hover" | "focus" | "activate",
+  ) {
+    if (range.dragging() || (intent === "focus" && suppressFocus.current))
+      return;
+    cancelTimers();
+    if (
+      intent !== "activate" &&
+      (actionRef.current?.activated || actionRef.current?.pinned)
+    )
+      return;
+    const open = () => {
+      if (!element.isConnected) return;
+      if (intent === "activate") {
+        range.clear();
+        onSelect(selected);
+      }
+      showActions({
+        element,
+        selection: selected,
+        commentable,
+        activated: intent === "activate",
+      });
+    };
+    if (intent === "hover") openTimer.current = setTimeout(open, 400);
+    else open();
+  }
   const diffRequest = useMemo<SyntaxRequest>(
     () => ({ kind: "diff", path: file.path, lines }),
     [file.path, lines],
@@ -126,13 +286,16 @@ export function CodePanel({
   const visibleSource = sourceLines.slice(sourceStart, sourceStart + 200);
   useEffect(() => {
     setDiffPage(0);
-  }, [file.path]);
+    closeActions();
+  }, [file.path, pr.baseSHA, pr.headSHA, closeActions]);
+  useEffect(() => () => cancelTimers(), [cancelTimers]);
   useEffect(() => {
     setSourceStart(sourceWindow(sourceLines.length, source?.highlight).start);
   }, [source, sourceLines.length]);
   useEffect(() => {
     if (diffPanel.current) diffPanel.current.scrollTop = 0;
-  }, [diffPage]);
+    closeActions();
+  }, [diffPage, closeActions]);
   useEffect(() => {
     const scroller =
       sourcePanel.current?.querySelector<HTMLElement>(".source-scroll");
@@ -207,7 +370,9 @@ export function CodePanel({
           {lines.length ? (
             <div className="code-table">
               {diffWindow.rows.map((line, index) => {
+                const rowIndex = diffWindow.start + index;
                 const position = linePosition(line);
+                const points = indexed[rowIndex];
                 const selectionFor = (
                   word: string,
                   character: number,
@@ -224,41 +389,53 @@ export function CodePanel({
                   sha: position?.side === "LEFT" ? pr.baseSHA : pr.headSHA,
                 });
                 return (
-                  <div className={`code-row ${line.kind}`} key={index}>
-                    <span className="comment-gutter">
+                  <div
+                    className={`code-row ${line.kind} ${range.selected(points.LEFT) || range.selected(points.RIGHT) ? "comment-range-selected" : ""}`}
+                    key={rowIndex}
+                    data-comment-row={rowIndex}
+                  >
+                    <span className="line-tools">
                       {position && (
                         <button
-                          className="add-comment"
+                          type="button"
+                          className="line-comment-action"
                           title={`Comment on ${position.side === "LEFT" ? "base" : "head"} line ${position.line}`}
                           aria-label={`Comment on ${position.side === "LEFT" ? "base" : "head"} line ${position.line}`}
-                          onClick={() => onComment(selectionFor("", 0))}
+                          onClick={() => {
+                            closeActions();
+                            const point = points[position.side]!;
+                            const selected = commentRange(
+                              indexed,
+                              point,
+                              point,
+                            );
+                            if (selected.range)
+                              onComment(rangeSelection(selected.range));
+                          }}
                         >
                           +
                         </button>
                       )}
                     </span>
-                    <span
-                      className="line-number"
-                      title={
-                        line.oldLine ? `Base line ${line.oldLine}` : undefined
-                      }
-                    >
-                      {line.oldLine && (
-                        <span className="sr-only">Base line </span>
-                      )}
-                      {line.oldLine}
-                    </span>
-                    <span
-                      className="line-number"
-                      title={
-                        line.newLine ? `Head line ${line.newLine}` : undefined
-                      }
-                    >
-                      {line.newLine && (
-                        <span className="sr-only">Head line </span>
-                      )}
-                      {line.newLine}
-                    </span>
+                    {(["LEFT", "RIGHT"] as const).map((side) => {
+                      const point = points[side];
+                      return point ? (
+                        <button
+                          key={side}
+                          type="button"
+                          className="line-number line-select"
+                          data-comment-side={side}
+                          title={`${side === "LEFT" ? "Base" : "Head"} line ${point.line}. Drag or Shift-click to select a range.`}
+                          aria-label={`Select ${side === "LEFT" ? "base" : "head"} line ${point.line} for a comment`}
+                          aria-pressed={range.selected(point)}
+                          {...range.handlers(point)}
+                        >
+                          {point.line}
+                        </button>
+                      ) : (
+                        <span className="line-number" key={side} />
+                      );
+                    })}
                     <span className="diff-marker" aria-hidden="true">
                       {line.kind === "add"
                         ? "+"
@@ -270,10 +447,16 @@ export function CodePanel({
                       {position ? (
                         <Tokens
                           code={line.text}
-                          spans={diffSyntax.lines[diffWindow.start + index]}
-                          onSelect={(word, column) =>
-                            onSelect(selectionFor(word, column))
+                          spans={diffSyntax.lines[rowIndex]}
+                          onIntent={(element, word, column, intent) =>
+                            symbolIntent(
+                              element,
+                              selectionFor(word, column),
+                              true,
+                              intent,
+                            )
                           }
+                          onLeave={leaveActions}
                         />
                       ) : (
                         line.text
@@ -293,10 +476,15 @@ export function CodePanel({
             </div>
           )}
         </div>
+        {range.error && (
+          <div className="range-feedback" role="status">
+            {range.error}
+          </div>
+        )}
         <div className="code-footnote">
           <span className="live-dot" />
-          Use + beside a line number to draft a comment. Submit drafts together
-          from Review.
+          Hover or select a symbol for code actions. Drag line numbers or
+          Shift-click to comment on a range. Submit drafts from Review.
           {(diffSyntax.limited || sourceSyntax.limited) &&
             " Syntax highlighting unavailable for this content; showing plain text."}
         </div>
@@ -359,17 +547,24 @@ export function CodePanel({
                       <Tokens
                         code={code}
                         spans={sourceSyntax.lines[i]}
-                        onSelect={(word, character) =>
-                          onSelect({
-                            path: source.path,
-                            line: i + 1,
-                            side: source.sha === pr.baseSHA ? "LEFT" : "RIGHT",
-                            sha: source.sha,
-                            character,
-                            word,
-                            code,
-                          })
+                        onIntent={(element, word, character, intent) =>
+                          symbolIntent(
+                            element,
+                            {
+                              path: source.path,
+                              line: i + 1,
+                              side:
+                                source.sha === pr.baseSHA ? "LEFT" : "RIGHT",
+                              sha: source.sha,
+                              character,
+                              word,
+                              code,
+                            },
+                            false,
+                            intent,
+                          )
                         }
+                        onLeave={leaveActions}
                       />
                     </code>
                   </div>
@@ -379,37 +574,29 @@ export function CodePanel({
           </div>
         </div>
       )}
-      {selection && (
-        <div className="symbol-bar" role="group" aria-label="Selected symbol actions">
-          <div>
-            <span className="eyebrow">FOLLOW THE CODE</span>
-            <strong>{selection.word || `Line ${selection.line}`}</strong>
-            <span className="symbol-location">
-              {selection.side === "LEFT" ? "base" : "head"}:{selection.line}
-            </span>
-          </div>
-          <label className="sr-only" htmlFor="navigation-method">
-            Navigation action
-          </label>
-          <select
-            id="navigation-method"
-            value={method}
-            onChange={(e) => onMethod(e.target.value as Method)}
-          >
-            <option value="definition">Go to definition</option>
-            <option value="implementation">Go to implementation</option>
-            <option value="references">Find references</option>
-            <option value="hover">Type information</option>
-          </select>
-          <button
-            className="primary"
-            disabled={busy || !selection.word}
-            onClick={onNavigate}
-          >
-            {busy ? "Following..." : "Follow symbol"}
-          </button>
-          <button onClick={onAsk}>Ask AI about selection</button>
-        </div>
+      {actions && (
+        <ContextActions
+          anchor={actions}
+          busy={busy}
+          onClose={closeActions}
+          onEnter={holdActions}
+          onLeave={leaveActions}
+          onNavigate={(selected, action) => {
+            closeActions();
+            onSelect(selected);
+            onMethod(action);
+            onNavigate(selected, action);
+          }}
+          onComment={(selected) => {
+            closeActions();
+            onComment(selected);
+          }}
+          onAsk={(selected) => {
+            closeActions();
+            onSelect(selected);
+            onAsk();
+          }}
+        />
       )}
     </section>
   );

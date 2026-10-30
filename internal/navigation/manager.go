@@ -8,6 +8,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/url"
 	"os"
@@ -22,6 +23,8 @@ import (
 	"unicode/utf8"
 
 	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
 const (
@@ -51,18 +54,21 @@ type Location struct {
 type Result struct {
 	Locations []Location `json:"locations"`
 	Hover     string     `json:"hover"`
+	Message   string     `json:"message,omitempty"`
 }
 
 type workspace struct {
-	mu      sync.Mutex
-	active  atomic.Int32
-	dir     string
-	root    string
-	expires time.Time
-	touched time.Time
-	timer   *time.Timer
-	client  *rpcClient
-	opened  map[string]bool
+	mu           sync.Mutex
+	active       atomic.Int32
+	dir          string
+	root         string
+	expires      time.Time
+	touched      time.Time
+	timer        *time.Timer
+	client       *rpcClient
+	serverKey    string
+	capabilities map[string]bool
+	opened       map[string]bool
 }
 
 type Manager struct {
@@ -88,7 +94,7 @@ func (m *Manager) Prepare(ctx context.Context, owner, repo, sha string, archive 
 		return "", errors.New("navigation manager is closed")
 	}
 	for key, w := range m.workspaces {
-		if time.Now().After(w.expires) || w.stopped() {
+		if time.Now().After(w.expires) {
 			w.close()
 			delete(m.workspaces, key)
 		}
@@ -121,11 +127,6 @@ func (m *Manager) Prepare(ctx context.Context, owner, repo, sha string, archive 
 	if err := extract(ctx, archive, w.root); err != nil {
 		return "", err
 	}
-	client, err := startServer(ctx, dir, w.root)
-	if err != nil {
-		return "", err
-	}
-	w.client = client
 	w.touched = time.Now()
 	m.workspaces[id] = w
 	w.timer = time.AfterFunc(time.Until(w.expires), func() {
@@ -147,7 +148,7 @@ func (m *Manager) get(id string) (*workspace, error) {
 	if m.closed || w == nil {
 		return nil, ErrNotFound
 	}
-	if time.Now().After(w.expires) || w.stopped() {
+	if time.Now().After(w.expires) {
 		w.close()
 		delete(m.workspaces, id)
 		return nil, ErrNotFound
@@ -187,14 +188,19 @@ func (m *Manager) File(ctx context.Context, id, name string) (string, error) {
 	return readFile(w.root, name)
 }
 
-func (m *Manager) Query(ctx context.Context, id, name, method string, line, character int) (Result, error) {
+func (m *Manager) Query(ctx context.Context, id, name, method string, line, character int) (out Result, resultErr error) {
 	allowed := map[string]string{"definition": "textDocument/definition", "implementation": "textDocument/implementation", "references": "textDocument/references", "hover": "textDocument/hover"}
 	lspMethod, ok := allowed[method]
 	if !ok {
 		return Result{}, errors.New("unsupported navigation method")
 	}
 	ctx, span := otel.Tracer("fjord/navigation").Start(ctx, "navigation."+method)
-	defer span.End()
+	defer func() {
+		if resultErr != nil {
+			span.SetStatus(codes.Error, "navigation failed")
+		}
+		span.End()
+	}()
 	ctx, cancel := context.WithTimeout(ctx, 45*time.Second)
 	defer cancel()
 	w, err := m.get(id)
@@ -204,11 +210,6 @@ func (m *Manager) Query(ctx context.Context, id, name, method string, line, char
 	defer w.active.Add(-1)
 	w.mu.Lock()
 	defer w.mu.Unlock()
-	stopCancellation := context.AfterFunc(ctx, w.client.close)
-	defer stopCancellation()
-	if !strings.HasSuffix(name, ".go") {
-		return Result{}, errors.New("language navigation currently supports Go files")
-	}
 	content, err := readFile(w.root, name)
 	if err != nil {
 		return Result{}, err
@@ -216,9 +217,37 @@ func (m *Manager) Query(ctx context.Context, id, name, method string, line, char
 	if !validPosition(content, line, character) {
 		return Result{}, errors.New("invalid UTF-16 source position")
 	}
+	route, err := routeFile(w.root, name)
+	if err != nil {
+		return Result{}, err
+	}
+	span.SetAttributes(attribute.String("language", route.language))
+	if w.serverKey != route.key || w.stopped() {
+		if w.client != nil {
+			w.client.close()
+			w.client = nil
+		}
+		loadCtx, loadSpan := otel.Tracer("fjord/navigation").Start(ctx, "navigation.server.start")
+		loadSpan.SetAttributes(attribute.String("language", route.language))
+		client, capabilities, err := startLanguageServer(loadCtx, w.dir, route.root, route.language)
+		if err != nil {
+			loadSpan.SetStatus(codes.Error, "language server startup failed")
+		}
+		loadSpan.End()
+		if err != nil {
+			return Result{}, err
+		}
+		w.client, w.capabilities, w.serverKey = client, capabilities, route.key
+		w.opened = make(map[string]bool)
+	}
+	if !w.capabilities[method] {
+		return Result{}, fmt.Errorf("%s language server does not support %s; choose another navigation action", route.displayName, method)
+	}
+	stopCancellation := context.AfterFunc(ctx, w.client.close)
+	defer stopCancellation()
 	uri := (&url.URL{Scheme: "file", Path: filepath.Join(w.root, filepath.FromSlash(name))}).String()
 	if !w.opened[name] {
-		if err := w.client.notify("textDocument/didOpen", map[string]any{"textDocument": map[string]any{"uri": uri, "languageId": "go", "version": 1, "text": content}}); err != nil {
+		if err := w.client.notify("textDocument/didOpen", map[string]any{"textDocument": map[string]any{"uri": uri, "languageId": route.languageID, "version": 1, "text": content}}); err != nil {
 			return Result{}, err
 		}
 		w.opened[name] = true
@@ -231,7 +260,14 @@ func (m *Manager) Query(ctx context.Context, id, name, method string, line, char
 	if err := w.client.call(ctx, lspMethod, params, &raw); err != nil {
 		return Result{}, err
 	}
-	return decodeResult(w.root, method, raw)
+	result, err := decodeResult(w.root, method, raw)
+	if err == nil && len(result.Locations) == 0 && result.Hover == "" {
+		result.Message = "No " + method + " result for this position."
+		if route.language == "terraform" {
+			result.Message += " Provider schemas and remote modules are unavailable in this isolated review; local variables, locals, and local module code can be navigated."
+		}
+	}
+	return result, err
 }
 
 func (m *Manager) Close() error {

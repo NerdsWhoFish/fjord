@@ -1,0 +1,152 @@
+.code-context-actions {
+  position: fixed;
+  z-index: 1100;
+  width: min(286px, calc(100vw - 16px));
+  max-height: calc(100dvh - 16px);
+  overflow: auto;
+  padding: 8px;
+  border: 1px solid var(--border-strong);
+  border-radius: 8px;
+  background: var(--white);
+  color: var(--ink);
+  box-shadow: 0 12px 40px var(--dialog-shadow);
+}
+.context-action-heading {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 5px 4px 10px;
+  margin-bottom: 5px;
+  border-bottom: 1px solid var(--line);
+}
+.context-action-heading strong {
+  display: block;
+  max-width: 215px;
+  overflow-wrap: anywhere;
+  font:
+    500 12px/1.5 "IBM Plex Mono",
+    monospace;
+}
+.context-action-heading span {
+  display: block;
+  margin-top: 3px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.code-context-actions > button {
+  display: flex;
+  width: 100%;
+  justify-content: space-between;
+  text-align: left;
+  padding: 9px 10px;
+  border: 0;
+  background: transparent;
+  font-size: 12px;
+}
+.code-context-actions > button:hover,
+.code-context-actions > button:focus-visible {
+  background: var(--button-hover);
+}
+.code-context-actions > .context-comment {
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 4px 4px;
+  margin-top: 5px;
+}
+.context-dismiss {
+  padding: 2px 7px;
+  border: 0;
+  min-width: 26px;
+  min-height: 26px;
+  background: transparent;
+  font-size: 13px;
+}
+.context-support-note {
+  margin: 5px 4px 9px;
+  font-size: 11px;
+  color: var(--muted);
+}
+.line-select {
+  display: inline-block;
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 0;
+  padding: 0 2px;
+  background: transparent;
+  color: var(--line-number);
+  font: inherit;
+  font-size: 10px;
+  line-height: inherit;
+  text-align: right;
+  touch-action: none;
+  user-select: none;
+  cursor: crosshair;
+}
+.line-select:hover,
+.line-select[aria-pressed="true"] {
+  color: var(--ink);
+  background: var(--surface-selected);
+}
+.code-row.comment-range-selected {
+  box-shadow: inset 3px 0 var(--target-border);
+  background: var(--target-background);
+}
+.line-tools {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+  flex: 0 0 22px;
+  width: 22px;
+  align-self: stretch;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.line-comment-action {
+  width: 20px;
+  min-width: 20px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid transparent;
+  border-radius: 3px;
+  background: var(--comment-background);
+  color: var(--comment-text);
+  font:
+    13px/1 "IBM Plex Mono",
+    monospace;
+  opacity: 0;
+}
+.code-row:hover .line-comment-action,
+.code-row:focus-within .line-comment-action {
+  opacity: 1;
+  border-color: var(--comment-border);
+}
+.range-feedback {
+  padding: 9px 13px;
+  font-size: 11px;
+  line-height: 1.5;
+  background: var(--warning-background);
+  color: var(--warning-text);
+  border-top: 1px solid var(--warning-border);
+}
+@media (hover: none), (pointer: coarse) {
+  .line-comment-action {
+    opacity: 1;
+    border-color: var(--comment-border);
+  }
+  .line-tools {
+    flex-basis: 27px;
+    width: 27px;
+  }
+  .line-comment-action {
+    width: 25px;
+    min-width: 25px;
+    height: 25px;
+  }
+  .line-select {
+    min-height: 27px;
+  }
+  .code-context-actions > button {
+    min-height: 42px;
+  }
+}

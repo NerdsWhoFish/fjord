@@ -175,12 +175,16 @@ func TestGoplsMissingDependencies(t *testing.T) {
 	archive := archiveBytes(t,
 		archiveEntry{name: "repo/go.mod", body: "module example.test/missing\n\ngo 1.24.0\n"},
 		archiveEntry{name: "repo/main.go", body: "package missing\nimport _ \"example.test/not-vendored\"\n"})
-	_, err := m.Prepare(context.Background(), "example", "missing", strings.Repeat("b", 40), bytes.NewReader(archive))
+	id, err := m.Prepare(context.Background(), "example", "missing", strings.Repeat("b", 40), bytes.NewReader(archive))
+	if err != nil {
+		t.Fatalf("preparation must not require Go dependencies: %v", err)
+	}
+	_, err = m.Query(context.Background(), id, "main.go", "definition", 0, 8)
 	if err == nil || !strings.Contains(err.Error(), "vendored dependencies") {
 		t.Fatalf("expected explicit dependency failure, got %v", err)
 	}
-	if len(m.workspaces) != 0 {
-		t.Fatal("failed workspace retained")
+	if len(m.workspaces) != 1 || m.workspaces[id].client != nil {
+		t.Fatal("failed runtime retained or prepared revision discarded")
 	}
 }
 

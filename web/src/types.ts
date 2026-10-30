@@ -29,6 +29,8 @@ export interface DraftComment {
   path: string;
   line: number;
   side: Side;
+  startLine?: number;
+  startSide?: Side;
   body: string;
 }
 export interface ThreadComment {
@@ -37,6 +39,8 @@ export interface ThreadComment {
   path: string;
   line: number;
   side: Side;
+  startLine?: number;
+  startSide?: Side;
   author: string;
   url: string;
 }
@@ -50,11 +54,14 @@ export interface CodeLocation {
 export interface NavigationResult {
   locations: CodeLocation[];
   hover: string;
+  message?: string;
 }
 export interface Selection {
   path: string;
   side: Side;
   line: number;
+  startLine?: number;
+  startSide?: Side;
   character: number;
   word: string;
   code: string;

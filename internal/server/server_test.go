@@ -141,3 +141,20 @@ func TestFaroEnvelopeDropsPrivateContent(t *testing.T) {
 		t.Fatal("dropped safe signals")
 	}
 }
+
+func TestReviewRangePayloadPreserved(t *testing.T) {
+	h, github := testServer()
+	body := `{"owner":"o","repo":"r","number":1,"headSHA":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","baseSHA":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","event":"COMMENT","comments":[{"path":"main.tf","line":12,"side":"RIGHT","start_line":9,"start_side":"RIGHT","body":"Check this range"}]}`
+	w := request(h, "/api/review", body, "127.0.0.1:4727", "http://127.0.0.1:4727", "application/json")
+	if w.Code != http.StatusOK || github.reviews != 1 || len(github.last.Comments) != 1 {
+		t.Fatalf("range review failed: %d %s", w.Code, w.Body)
+	}
+	comment := github.last.Comments[0]
+	if comment.StartLine != 9 || comment.StartSide != "RIGHT" || comment.Line != 12 {
+		t.Fatalf("range changed: %+v", comment)
+	}
+	w = request(h, "/api/review", strings.Replace(body, "start_line", "startLine", 1), "127.0.0.1:4727", "http://127.0.0.1:4727", "application/json")
+	if w.Code != http.StatusBadRequest || github.reviews != 1 {
+		t.Fatal("unknown range field was silently accepted")
+	}
+}

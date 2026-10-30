@@ -1,6 +1,11 @@
 // Package github implements the GitHub operations used by a Fjord review.
 package github
 
+import (
+	"bytes"
+	"encoding/json"
+)
+
 type PR struct {
 	Owner  string `json:"owner"`
 	Repo   string `json:"repo"`
@@ -36,20 +41,47 @@ type Review struct {
 }
 
 type Comment struct {
-	Path string `json:"path"`
-	Line int    `json:"line"`
-	Side string `json:"side"`
-	Body string `json:"body"`
+	Path      string `json:"path"`
+	Line      int    `json:"line"`
+	Side      string `json:"side"`
+	Body      string `json:"body"`
+	StartLine int    `json:"start_line,omitempty"`
+	StartSide string `json:"start_side,omitempty"`
+
+	startLineSet bool
+	startSideSet bool
+}
+
+func (c *Comment) UnmarshalJSON(data []byte) error {
+	type plainComment Comment
+	var decoded plainComment
+	decoder := json.NewDecoder(bytes.NewReader(data))
+	decoder.DisallowUnknownFields()
+	if err := decoder.Decode(&decoded); err != nil {
+		return err
+	}
+	var fields map[string]json.RawMessage
+	if err := json.Unmarshal(data, &fields); err != nil {
+		return err
+	}
+	*c = Comment(decoded)
+	// Explicit zero/null range fields must not silently become a single-line
+	// comment. Preserve their presence until review validation.
+	_, c.startLineSet = fields["start_line"]
+	_, c.startSideSet = fields["start_side"]
+	return nil
 }
 
 type ThreadComment struct {
-	ID     int64  `json:"id"`
-	Body   string `json:"body"`
-	Path   string `json:"path"`
-	Line   int    `json:"line"`
-	Side   string `json:"side"`
-	Author string `json:"author"`
-	URL    string `json:"url"`
+	ID        int64  `json:"id"`
+	Body      string `json:"body"`
+	Path      string `json:"path"`
+	Line      int    `json:"line"`
+	Side      string `json:"side"`
+	StartLine int    `json:"startLine,omitempty"`
+	StartSide string `json:"startSide,omitempty"`
+	Author    string `json:"author"`
+	URL       string `json:"url"`
 }
 
 // APIError deliberately excludes GitHub response bodies, which can contain
