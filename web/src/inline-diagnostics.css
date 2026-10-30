@@ -1,0 +1,77 @@
+.diagnostic-summary {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted);
+  font-size: 11px;
+  white-space: normal;
+}
+.diagnostic-summary button {
+  font: inherit;
+}
+.diagnostic-marker {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  width: 18px;
+  height: 19px;
+  padding: 0;
+  border: 1px solid currentColor;
+  border-radius: 4px;
+  background: var(--white);
+  cursor: pointer;
+  font:
+    700 11px/1 "IBM Plex Mono",
+    monospace;
+}
+.diagnostic-error {
+  color: var(--red, #d14444);
+}
+.diagnostic-warning {
+  color: var(--warning-text);
+}
+.diagnostic-information,
+.diagnostic-hint,
+.diagnostic-diagnostic {
+  color: var(--muted);
+}
+.code-diagnostic {
+  text-decoration-line: underline;
+  text-decoration-style: wavy;
+  text-decoration-color: var(--muted);
+  text-underline-offset: 3px;
+}
+.code-diagnostic.diagnostic-error {
+  color: inherit;
+  text-decoration-color: var(--red, #d14444);
+}
+.code-diagnostic.diagnostic-warning {
+  color: inherit;
+  text-decoration-color: var(--warning-text);
+}
+.source-diagnostic-gutter {
+  display: inline-block;
+  width: 22px;
+  flex: 0 0 22px;
+}
+.diagnostic-messages {
+  list-style: none;
+  margin: 0;
+  padding: 4px;
+  white-space: normal;
+}
+.diagnostic-messages li {
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+.diagnostic-messages strong {
+  display: block;
+  font-size: 11px;
+  text-transform: capitalize;
+}
+.diagnostic-messages p {
+  margin: 4px 0;
+  overflow-wrap: anywhere;
+  font-size: 12px;
+  line-height: 1.5;
+}

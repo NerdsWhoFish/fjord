@@ -19,12 +19,7 @@ export const methodLabels: Record<Method, string> = {
   rename: "Preview rename",
 };
 
-const fileMethods: Method[] = [
-  "diagnostics",
-  "documentSymbols",
-  "workspaceSymbols",
-  "inlayHints",
-];
+const fileMethods: Method[] = ["inlayHints"];
 const symbolMethods: Method[] = [
   "implementation",
   "hover",

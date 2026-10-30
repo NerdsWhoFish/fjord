@@ -1,6 +1,19 @@
-import { useCallback, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { api } from "./api";
-import { Assistant } from "./Assistant";
+import { parsePRRoute, prPath } from "./pr-route";
+import { OutlinePanel } from "./OutlinePanel";
+import { WorkspaceSearch } from "./WorkspaceSearch";
+import { MCPResults } from "./MCPResults";
+import { useReviewSession } from "./useReviewSession";
+import type { ActionContext, SessionAction } from "./session-client";
+import "./workspace-insights.css";
 import { CodePanel } from "./CodePanel";
 import { FileTree } from "./FileTree";
 import { SettingsMenu } from "./SettingsMenu";
@@ -10,6 +23,7 @@ import type { ReviewDraft } from "./ReviewPanel";
 import { captureError, startTelemetry } from "./telemetry";
 import { combinedNavigation } from "./combined-navigation";
 import { codeActionSuggestions } from "./code-action-suggestions";
+import { remainingDraft, submissionBody } from "./review-draft";
 import type {
   CodeLocation,
   ChangedFile,
@@ -21,6 +35,7 @@ import type {
   PullRequest,
   QueryOptions,
   ReviewAction,
+  ReviewEvent,
   Selection,
   SourceView,
   ThreadComment,
@@ -63,19 +78,22 @@ export function App() {
   const [pendingComment, setPendingComment] = useState<Selection>();
   const [threads, setThreads] = useState<ThreadComment[]>([]);
   const [threadsError, setThreadsError] = useState("");
-  const [config, setConfig] = useState<Config>(
-    globalThis.__FJORD_CONFIG__ || {
-      aiEnabled: false,
-      telemetryEnabled: false,
-    },
-  );
-  const [tab, setTab] = useState<"review" | "assistant">("review");
+  const [reviewOpen, setReviewOpen] = useState(false);
+  const [assistantResult, setAssistantResult] = useState<{
+    id: string;
+    selection: Selection;
+    method: Method;
+    result: NavigationResult;
+  }>();
   const [mobileTab, setMobileTab] = useState<"code" | "review">("code");
   const [viewed, setViewed] = useState<Set<string>>(new Set());
   const [filter, setFilter] = useState("");
   const epoch = useRef(0);
   const prEpoch = useRef(0);
   const threadEpoch = useRef(0);
+  const loadEpoch = useRef(0);
+  const loadController = useRef<AbortController | undefined>(undefined);
+  const routeAddress = useRef("");
   const workspaces = useRef(new Map<string, { id: string; expires: number }>());
   const workspaceRequests = useRef(new Map<string, Promise<string>>());
   const capabilityRequests = useRef(
@@ -84,7 +102,24 @@ export function App() {
       { promise: Promise<NavigationCapabilities>; expires: number }
     >(),
   );
+  const outlineRequests = useRef(new Map<string, Promise<NavigationResult>>());
   const file = pr?.files.find((f) => f.path === selectedFile);
+  const inspectionSelection = useMemo<Selection | undefined>(() => {
+    if (!pr || (!source && !file)) return;
+    const base = source
+      ? source.sha === pr.baseSHA
+      : file?.status === "removed";
+    return {
+      path:
+        source?.path || (base ? file!.previousPath || file!.path : file!.path),
+      sha: source?.sha || (base ? pr.baseSHA : pr.headSHA),
+      side: base ? "LEFT" : "RIGHT",
+      line: 1,
+      character: 0,
+      word: "",
+      code: "",
+    };
+  }, [pr, file, source]);
 
   const ensureWorkspace = useCallback(
     async (sha: string): Promise<string> => {
@@ -153,7 +188,89 @@ export function App() {
     [demo, ensureWorkspace],
   );
 
+  const inspectCode = useCallback(
+    async (
+      selected: Selection,
+      action: "documentSymbols" | "workspaceSymbols" | "diagnostics",
+      options?: QueryOptions,
+    ): Promise<NavigationResult> => {
+      if (demo)
+        return {
+          locations: [],
+          hover: "",
+          items: [],
+          message: "Open a real pull request for language-server insights.",
+        };
+      const key = `${selected.sha}:${selected.path}`;
+      if (action === "documentSymbols") {
+        const cached = outlineRequests.current.get(key);
+        if (cached) return cached;
+      }
+      const currentPR = prEpoch.current;
+      const promise = (async () => {
+        const capabilities = await navigationCapabilities(selected);
+        if (!capabilities.methods.includes(action))
+          return {
+            locations: [],
+            hover: "",
+            message:
+              capabilities.message ||
+              "This language server does not support this feature.",
+          };
+        const id = await ensureWorkspace(selected.sha);
+        return api<NavigationResult>("navigate", {
+          id,
+          path: selected.path,
+          method: action,
+          line: selected.line - 1,
+          character: selected.character,
+          options,
+        });
+      })().catch((error) => {
+        if (prEpoch.current === currentPR) outlineRequests.current.delete(key);
+        captureError(error, "navigate");
+        throw error;
+      });
+      if (action === "documentSymbols") {
+        if (outlineRequests.current.size >= 64)
+          outlineRequests.current.delete(
+            outlineRequests.current.keys().next().value!,
+          );
+        outlineRequests.current.set(key, promise);
+      }
+      return promise;
+    },
+    [demo, navigationCapabilities, ensureWorkspace],
+  );
+  const loadDiagnostics = useCallback(
+    (selected: Selection) => inspectCode(selected, "diagnostics"),
+    [inspectCode],
+  );
+  function startReview(event = draft.event) {
+    changeDraft({ ...draft, event });
+    setReviewOpen(true);
+  }
+  async function showInspectionLocation(
+    location: CodeLocation,
+    selected: Selection,
+  ) {
+    const requestEpoch = ++epoch.current;
+    try {
+      const workspace = await ensureWorkspace(selected.sha);
+      if (requestEpoch !== epoch.current) return;
+      setMobileTab("code");
+      await showLocation(location, workspace, selected.sha, requestEpoch);
+    } catch (error) {
+      captureError(error, "navigate");
+      if (requestEpoch === epoch.current)
+        setError(
+          error instanceof Error ? error.message : "Could not open the symbol.",
+        );
+    }
+  }
+
   function changeDraft(next: ReviewDraft) {
+    draftRef.current = next;
     setDraft(next);
     if (pr && !writeDraft(pr, demo, next))
       setNotice(
@@ -184,8 +301,13 @@ export function App() {
     setScrollTarget({ path: next.files[0]?.path || "" });
     setSource(undefined);
     setAnnotations(undefined);
+    setAssistantResult(undefined);
+    setReviewOpen(false);
+    setPendingComment(undefined);
     setSelection(undefined);
-    setDraft(readDraft(next, isDemo));
+    const restored = readDraft(next, isDemo);
+    draftRef.current = restored;
+    setDraft(restored);
     setViewed(new Set());
     setThreads([]);
     setThreadsError("");
@@ -195,6 +317,7 @@ export function App() {
     workspaces.current.clear();
     workspaceRequests.current.clear();
     capabilityRequests.current.clear();
+    outlineRequests.current.clear();
     setMobileTab("code");
   }
   async function reloadThreads(next = pr, isDemo = demo) {
@@ -229,28 +352,60 @@ export function App() {
         );
     }
   }
-  async function openPR(event: React.FormEvent) {
-    event.preventDefault();
+  function leavePR() {
+    loadEpoch.current++;
+    loadController.current?.abort();
+    epoch.current++;
+    prEpoch.current++;
+    threadEpoch.current++;
+    setPR(undefined);
+    setAssistantResult(undefined);
+    setSource(undefined);
+    setSelection(undefined);
+    setReviewOpen(false);
+    setPendingComment(undefined);
+    setNavigating(false);
+    setLoading(false);
+    setNotice("");
+    setError("");
+  }
+  async function loadPR(rawURL: string, history: "push" | "replace") {
+    leavePR();
+    const requestEpoch = ++loadEpoch.current;
+    const controller = new AbortController();
+    loadController.current = controller;
+    setURL(rawURL);
     setError("");
     setLoading(true);
     try {
-      const next = await api<PullRequest>("pr", { url: url.trim() });
+      const next = await api<PullRequest>(
+        "pr",
+        { url: rawURL.trim() },
+        controller.signal,
+      );
+      if (requestEpoch !== loadEpoch.current) return;
       acceptPR(next, false);
+      const path = prPath(next);
+      if (history === "push" && location.pathname + location.search !== path)
+        window.history.pushState(null, "", path);
+      else window.history.replaceState(null, "", path);
+      routeAddress.current = location.pathname + location.search;
       void reloadThreads(next, false);
       const currentPR = prEpoch.current;
       api<Config>("config")
         .then((nextConfig) => {
           if (prEpoch.current !== currentPR) return;
-          setConfig(nextConfig);
           if (nextConfig.telemetryEnabled) startTelemetry();
         })
         .catch(() => {
           if (prEpoch.current === currentPR)
             setNotice(
-              "Optional AI and telemetry configuration could not be loaded. Review and navigation remain available.",
+              "Telemetry configuration could not be loaded. Review and navigation remain available.",
             );
         });
     } catch (error) {
+      if (controller.signal.aborted || requestEpoch !== loadEpoch.current)
+        return;
       captureError(error, "pr.load");
       setError(
         error instanceof Error
@@ -258,13 +413,51 @@ export function App() {
           : "Could not open this pull request.",
       );
     } finally {
-      setLoading(false);
+      if (requestEpoch === loadEpoch.current) setLoading(false);
     }
   }
+  function openPR(event: React.FormEvent) {
+    event.preventDefault();
+    void loadPR(url, "push");
+  }
+  const followRoute = useEffectEvent(() => {
+    // Fragment links are local keyboard/navigation affordances, not PR identities.
+    const route = parsePRRoute({
+      pathname: location.pathname,
+      search: location.search,
+      hash: "",
+    });
+    if (route.kind === "pr") {
+      void loadPR(route.githubURL, "replace");
+    } else {
+      leavePR();
+      setURL("");
+      if (route.kind === "error") setError(route.message);
+    }
+  });
+  useEffect(() => {
+    routeAddress.current = location.pathname + location.search;
+    followRoute();
+    function popstate() {
+      const next = location.pathname + location.search;
+      if (next === routeAddress.current) return;
+      routeAddress.current = next;
+      followRoute();
+    }
+    window.addEventListener("popstate", popstate);
+    return () => {
+      loadEpoch.current++;
+      loadController.current?.abort();
+      window.removeEventListener("popstate", popstate);
+    };
+  }, []);
   function openDemo() {
+    loadEpoch.current++;
+    loadController.current?.abort();
+    window.history.replaceState(null, "", "/");
+    routeAddress.current = "/";
     acceptPR(demoPR, true);
     setThreads(demoThreads);
-    setConfig({ aiEnabled: false, telemetryEnabled: false });
   }
   const loadContent = useCallback(
     async (target: ChangedFile, side: "LEFT" | "RIGHT"): Promise<string> => {
@@ -482,10 +675,9 @@ export function App() {
         n.toString(16).padStart(8, "0"),
       ).join(""),
     }));
-    setDraft((current) => {
-      const next = { ...current, comments: [...current.comments, ...added] };
-      writeDraft(pr, demo, next);
-      return next;
+    changeDraft({
+      ...draftRef.current,
+      comments: [...draftRef.current.comments, ...added],
     });
     setNotice(
       `Added ${added.length} suggestion ${added.length === 1 ? "draft" : "drafts"} to your review.`,
@@ -495,6 +687,7 @@ export function App() {
     if (!pr || demo || pr.state !== "open")
       throw new Error("Only open GitHub pull requests can receive reviews.");
     const currentPR = prEpoch.current;
+    const submitted = draftRef.current;
     try {
       const result = await api<{ url: string }>("review", {
         owner: pr.owner,
@@ -502,26 +695,25 @@ export function App() {
         number: pr.number,
         baseSHA: pr.baseSHA,
         headSHA: pr.headSHA,
-        event: draft.event,
-        body: draft.body,
-        comments: draft.comments.map(
-          ({ path, line, side, body, startLine, startSide }) => ({
-            path,
-            line,
-            side,
-            body,
-            start_line: startLine,
-            start_side: startSide,
-          }),
-        ),
+        event: submitted.event,
+        body: submitted.body,
+        comments: submitted.comments.map((comment) => ({
+          path: comment.path,
+          line: comment.line,
+          side: comment.side,
+          body: submissionBody(comment),
+          start_line: comment.startLine,
+          start_side: comment.startSide,
+        })),
       });
-      writeDraft(pr, false, emptyDraft());
       if (prEpoch.current === currentPR) {
-        setDraft(emptyDraft());
+        changeDraft(remainingDraft(draftRef.current, submitted));
         setNotice(
           `Review submitted to GitHub.${result.url ? " Open the PR to see your review." : ""}`,
         );
         void reloadThreads();
+      } else {
+        writeDraft(pr, false, remainingDraft(readDraft(pr, false), submitted));
       }
     } catch (error) {
       captureError(error, "review.submit");
@@ -545,25 +737,114 @@ export function App() {
       throw error;
     }
   }
-  async function ask(question: string) {
-    if (!selection) throw new Error("Select some code first.");
-    if (demo)
-      return "This is a sample response, not an AI analysis. The select statement listens for context cancellation while waiting for the backoff timer. Follow the definition of backoff to check the maximum delay, then verify that Connector.Open also respects the context.";
+  async function applySessionAction(
+    action: SessionAction,
+    context: ActionContext,
+  ) {
+    if (!pr || !context.isCurrent())
+      throw new Error(
+        "The review changed before this action could be applied.",
+      );
+    if (action.kind === "draft") {
+      const comment = action.comment;
+      if (!comment || comment.source !== "ai")
+        throw new Error("The assistant draft is invalid.");
+      if (
+        draftRef.current.comments.some((existing) => existing.id === comment.id)
+      )
+        return;
+      if (draftRef.current.comments.length >= 100)
+        throw new Error("The review already contains 100 draft comments.");
+      changeDraft({
+        ...draftRef.current,
+        comments: [...draftRef.current.comments, comment],
+      });
+      setNotice(
+        "Your assistant added a review draft. Inspect it in the review dialog before submitting.",
+      );
+      return;
+    }
+    if (
+      !action.path ||
+      !action.sha ||
+      !action.line ||
+      ![pr.headSHA, pr.baseSHA].includes(action.sha)
+    )
+      throw new Error(
+        "The assistant action does not identify this review's source revision.",
+      );
+    if (action.kind === "navigation" && (!action.method || !action.result))
+      throw new Error("The assistant navigation result is missing.");
+    const requestEpoch = ++epoch.current;
+    setNavigating(true);
     try {
-      return (
-        await api<{ answer: string }>("assist", {
-          question,
-          code: selection.code,
-          path: selection.path,
-          patch: "",
-        })
-      ).answer;
-    } catch (error) {
-      captureError(error, "assist");
-      throw error;
+      const workspace = await ensureWorkspace(action.sha);
+      if (!context.isCurrent() || requestEpoch !== epoch.current)
+        throw new Error("Newer navigation superseded this assistant action.");
+      const { content } = await api<{ content: string }>(
+        "workspace/file",
+        {
+          id: workspace,
+          path: action.path,
+        },
+        context.signal,
+      );
+      if (!context.isCurrent() || requestEpoch !== epoch.current)
+        throw new Error("Newer navigation superseded this assistant action.");
+      const selected: Selection = {
+        path: action.path,
+        sha: action.sha,
+        side: action.sha === pr.baseSHA ? "LEFT" : "RIGHT",
+        line: action.line,
+        character: action.character || 0,
+        word: "",
+        code: content.split("\n")[action.line - 1] || "",
+      };
+      setSource({
+        path: action.path,
+        sha: action.sha,
+        content,
+        highlight: action.line - 1,
+        workspace,
+      });
+      setNavWorkspace(workspace);
+      setNavSHA(action.sha);
+      setSelection(selected);
+      if (action.kind === "navigation") {
+        setAssistantResult({
+          id: action.id,
+          selection: selected,
+          method: action.method!,
+          result: action.result!,
+        });
+        if (
+          action.method === "documentHighlights" ||
+          action.method === "inlayHints"
+        ) {
+          setAnnotations({
+            path: selected.path,
+            sha: selected.sha,
+            highlights: action.result!.highlights,
+            hints: action.result!.hints,
+          });
+        }
+        setMobileTab("review");
+      } else {
+        setAssistantResult(undefined);
+        setMobileTab("code");
+      }
+    } finally {
+      if (requestEpoch === epoch.current) setNavigating(false);
     }
   }
-
+  const reviewSession = useReviewSession({
+    pr,
+    demo,
+    draft,
+    selection,
+    getDraft: () => draftRef.current,
+    onAction: applySessionAction,
+  });
   const openForm = (
     <form className="open-form" onSubmit={openPR}>
       <label className="sr-only" htmlFor="pr-url">
@@ -588,7 +869,10 @@ export function App() {
       <div className="welcome">
         <header>
           <Brand />
-          <SettingsMenu />
+          <SettingsMenu
+            session={reviewSession}
+            onRetrySession={reviewSession.retry}
+          />
         </header>
         <main className="welcome-main">
           <div className="welcome-copy">
@@ -667,7 +951,7 @@ export function App() {
             );
           }}
         >
-          Skip to review and assistance
+          Skip to file outline
         </a>
       </nav>
       <aside className="file-rail">
@@ -726,16 +1010,49 @@ export function App() {
               <span aria-hidden="true">&rarr;</span>
               <code>{pr.baseRef}</code>
             </p>
+            <div
+              className="review-decision-actions"
+              aria-label="Review decision"
+            >
+              {(["COMMENT", "APPROVE", "REQUEST_CHANGES"] as ReviewEvent[]).map(
+                (event) => (
+                  <button
+                    key={event}
+                    className={event === "APPROVE" ? "review-approve" : ""}
+                    onClick={() => startReview(event)}
+                  >
+                    {event === "COMMENT"
+                      ? "Comment"
+                      : event === "APPROVE"
+                        ? "Approve"
+                        : "Request changes"}
+                  </button>
+                ),
+              )}
+              <button className="text-button" onClick={() => startReview()}>
+                {draft.comments.length} draft{" "}
+                {draft.comments.length === 1 ? "comment" : "comments"} /
+                Conversation
+              </button>
+            </div>
           </div>
           <div className="header-actions">
-            <SettingsMenu />
+            <WorkspaceSearch
+              selected={inspectionSelection}
+              inspect={inspectCode}
+              onLocation={showInspectionLocation}
+            />
+            <SettingsMenu
+              session={reviewSession}
+              onRetrySession={reviewSession.retry}
+            />
           </div>
         </header>
         {demo && (
           <div className="demo-banner">
             <strong>Sample workspace</strong>
             <span>
-              Navigation and AI use illustrative fixtures. GitHub actions are
+              Navigation uses illustrative fixtures. GitHub actions are
               disabled.
             </span>
           </div>
@@ -785,7 +1102,7 @@ export function App() {
               className={mobileTab === "review" ? "active" : ""}
               onClick={() => setMobileTab("review")}
             >
-              Review ({draft.comments.length})
+              Outline
             </button>
           </div>
         </div>
@@ -816,6 +1133,7 @@ export function App() {
                 annotations={annotations}
                 onClearAnnotations={() => setAnnotations(undefined)}
                 onCapabilities={navigationCapabilities}
+                onDiagnostics={loadDiagnostics}
                 onSource={openSource}
                 onLoadContent={loadContent}
                 onLocation={(location) => {
@@ -827,13 +1145,7 @@ export function App() {
                   setSource(undefined);
                 }}
                 onComment={(next) => {
-                  setTab("review");
-                  setMobileTab("review");
                   setPendingComment(next);
-                }}
-                onAsk={() => {
-                  setTab("assistant");
-                  setMobileTab("review");
                 }}
               />
             ) : (
@@ -847,51 +1159,52 @@ export function App() {
             className="context-panel"
             id="review-context"
             tabIndex={-1}
-            aria-label="Review and assistance"
+            aria-label={
+              assistantResult ? "Assistant code results" : "File outline"
+            }
           >
-            <div className="context-tabs">
-              <button
-                className={tab === "review" ? "active" : ""}
-                onClick={() => setTab("review")}
-              >
-                Review <span>{draft.comments.length}</span>
-              </button>
-              <button
-                className={tab === "assistant" ? "active" : ""}
-                onClick={() => setTab("assistant")}
-              >
-                AI assistance
-              </button>
-            </div>
-            <div className={tab === "review" ? "" : "hidden-panel"}>
-              <ReviewPanel
-                key={`${pr.headSHA}:${demo}`}
-                pr={pr}
-                demo={demo}
-                draft={draft}
-                onDraft={changeDraft}
-                threads={threads}
-                threadsError={threadsError}
-                onReloadThreads={() => {
-                  void reloadThreads();
-                }}
-                onSubmit={submitReview}
-                onReply={reply}
-                pendingComment={pendingComment}
-                onCloseComment={() => setPendingComment(undefined)}
+            {assistantResult ? (
+              <MCPResults
+                key={assistantResult.id}
+                {...assistantResult}
+                onLocation={showInspectionLocation}
+                onSuggest={suggestAction}
+                onClearAnnotations={() => setAnnotations(undefined)}
+                onClose={() => setAssistantResult(undefined)}
               />
-            </div>
-            <div className={tab === "assistant" ? "" : "hidden-panel"}>
-              <Assistant
-                key={pr.headSHA}
-                selection={selection}
-                enabled={config.aiEnabled}
-                demo={demo}
-                onAsk={ask}
+            ) : (
+              <OutlinePanel
+                selected={inspectionSelection}
+                currentLine={
+                  selection?.path === inspectionSelection?.path &&
+                  selection?.sha === inspectionSelection?.sha
+                    ? selection!.line - 1
+                    : source?.highlight
+                }
+                inspect={inspectCode}
+                onLocation={showInspectionLocation}
               />
-            </div>
+            )}
           </aside>
         </div>
+        <ReviewPanel
+          key={`${pr.headSHA}:${demo}`}
+          pr={pr}
+          demo={demo}
+          draft={draft}
+          onDraft={changeDraft}
+          threads={threads}
+          threadsError={threadsError}
+          onReloadThreads={() => {
+            void reloadThreads();
+          }}
+          onSubmit={submitReview}
+          onReply={reply}
+          pendingComment={pendingComment}
+          onCloseComment={() => setPendingComment(undefined)}
+          open={reviewOpen}
+          onCloseReview={() => setReviewOpen(false)}
+        />
       </main>
     </div>
   );

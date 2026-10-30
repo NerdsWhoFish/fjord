@@ -14,6 +14,7 @@ import type {
   NavigationResult,
   QueryOptions,
   ReviewAction,
+  ReviewItem,
   Selection,
 } from "./types";
 import { watchCapabilities } from "./navigation-capabilities";
@@ -30,7 +31,8 @@ export interface ActionAnchor {
   commentable: boolean;
   activated: boolean;
   pinned?: boolean;
-  scope?: "file" | "symbol";
+  scope?: "file" | "symbol" | "diagnostic";
+  diagnostics?: ReviewItem[];
 }
 
 interface Props {
@@ -49,7 +51,6 @@ interface Props {
   onLocation: (location: CodeLocation) => void;
   onCapabilities: CapabilityLoader;
   onComment: (selection: Selection) => void;
-  onAsk: (selection: Selection) => void;
 }
 
 export function ContextActions({
@@ -64,7 +65,6 @@ export function ContextActions({
   onLocation,
   onCapabilities,
   onComment,
-  onAsk,
 }: Props) {
   const panel = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ left: 8, top: 8, ready: false });
@@ -173,10 +173,14 @@ export function ContextActions({
     result?.request === request ? result.state : { status: "loading" };
   const methods =
     selection.word && capabilityState.status === "ready"
-      ? availableActions(
-          capabilityState.capabilities.methods,
-          anchor.scope === "file",
-        )
+      ? anchor.scope === "diagnostic"
+        ? capabilityState.capabilities.methods.filter(
+            (method) => method === "codeActions",
+          )
+        : availableActions(
+            capabilityState.capabilities.methods,
+            anchor.scope === "file",
+          )
       : [];
   useEffect(
     () =>
@@ -328,6 +332,17 @@ export function ContextActions({
           x
         </button>
       </div>
+      {!activeNavigation && anchor.diagnostics && (
+        <ul className="diagnostic-messages">
+          {anchor.diagnostics.map((item, index) => (
+            <li key={index}>
+              <strong className={`diagnostic-${item.kind}`}>{item.kind}</strong>
+              <p>{item.label}</p>
+              {item.detail && <small>{item.detail}</small>}
+            </li>
+          ))}
+        </ul>
+      )}
       {activeNavigation ? (
         <>
           <button
@@ -421,7 +436,11 @@ export function ContextActions({
               data-navigation-focus={method}
               onClick={() => chooseMethod(method)}
             >
-              <span>{labels[method]}</span>
+              <span>
+                {anchor.scope === "diagnostic" && method === "codeActions"
+                  ? "Show available fixes"
+                  : labels[method]}
+              </span>
               <span aria-hidden="true">&rarr;</span>
             </button>
           ))}
@@ -448,7 +467,9 @@ export function ContextActions({
             (capabilityState.capabilities.message || !methods.length) && (
               <p className="context-support-note" role="status">
                 {capabilityState.capabilities.message ||
-                  "No code navigation actions are available for this file."}
+                  (anchor.scope === "diagnostic"
+                    ? "This language server does not offer code fixes here."
+                    : "No code navigation actions are available for this file.")}
               </p>
             )}
         </>
@@ -462,11 +483,6 @@ export function ContextActions({
           {selection.startLine
             ? "Comment on selected lines"
             : "Comment on this line"}
-        </button>
-      )}
-      {selection.word && anchor.scope !== "file" && (
-        <button type="button" onClick={() => onAsk(selection)}>
-          Ask AI about selection
         </button>
       )}
     </div>,

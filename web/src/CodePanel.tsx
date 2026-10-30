@@ -9,8 +9,14 @@ import {
 import type { ReactNode } from "react";
 import { linePosition, parsePatch, tokenize } from "./diff";
 import { AnnotatedText } from "./AnnotatedText";
-import { annotationsForLine } from "./code-annotations";
+import { annotationsForLine, withDiagnostics } from "./code-annotations";
 import type { LineAnnotations } from "./code-annotations";
+import { DiagnosticCache, diagnosticsForLine } from "./inline-diagnostics";
+import {
+  DiagnosticMarker,
+  DiagnosticSummary,
+  useDiagnostics,
+} from "./InlineDiagnostics";
 import { useSyntax } from "./useSyntax";
 import type { HighlightSpan, SyntaxRequest } from "./syntax-types";
 import type {
@@ -23,6 +29,7 @@ import type {
   PullRequest,
   QueryOptions,
   ReviewAction,
+  ReviewItem,
   Selection,
   Side,
   SourceView,
@@ -60,12 +67,12 @@ interface Props {
   annotations?: CodeAnnotations;
   onClearAnnotations: () => void;
   onCapabilities: (selection: Selection) => Promise<NavigationCapabilities>;
+  onDiagnostics: (selection: Selection) => Promise<NavigationResult>;
   onSource: (side: Side, file?: ChangedFile) => void;
   onLoadContent: (file: ChangedFile, side: Side) => Promise<string>;
   onLocation: (location: CodeLocation) => void;
   onCloseSource: () => void;
   onComment: (selection: Selection) => void;
-  onAsk: () => void;
 }
 
 function Tokens({
@@ -206,6 +213,25 @@ function Tokens({
 }
 
 export function CodePanel(props: Props) {
+  const diagnosticScope = `${props.pr.owner}/${props.pr.repo}/${props.pr.number}/${props.pr.baseSHA}/${props.pr.headSHA}`;
+  const loaders = useRef({ props, scope: diagnosticScope });
+  loaders.current = { props, scope: diagnosticScope };
+  const diagnostics = useMemo(
+    () =>
+      new DiagnosticCache(
+        (selection) => {
+          if (loaders.current.scope !== diagnosticScope)
+            return Promise.reject(new Error("The pull request changed."));
+          return loaders.current.props.onCapabilities(selection);
+        },
+        (selection) => {
+          if (loaders.current.scope !== diagnosticScope)
+            return Promise.reject(new Error("The pull request changed."));
+          return loaders.current.props.onDiagnostics(selection);
+        },
+      ),
+    [diagnosticScope],
+  );
   const scroller = useRef<HTMLDivElement>(null);
   const onActiveFile = useRef(props.onActiveFile);
   onActiveFile.current = props.onActiveFile;
@@ -311,11 +337,18 @@ export function CodePanel(props: Props) {
               file={file}
               active={file.path === props.file.path}
             >
-              <FileCodePanel {...props} file={file} source={undefined} />
+              <FileCodePanel
+                {...props}
+                file={file}
+                source={undefined}
+                diagnosticCache={diagnostics}
+              />
             </DeferredFile>
           ))}
         </div>
-        {props.source && <FileCodePanel {...props} sourceOnly />}
+        {props.source && (
+          <FileCodePanel {...props} sourceOnly diagnosticCache={diagnostics} />
+        )}
       </div>
     </section>
   );
@@ -392,11 +425,55 @@ function FileCodePanel({
   onLoadContent,
   onCloseSource,
   onComment,
-  onAsk,
   viewed,
   onViewed,
   sourceOnly = false,
-}: Props & { sourceOnly?: boolean }) {
+  diagnosticCache,
+}: Props & { sourceOnly?: boolean; diagnosticCache: DiagnosticCache }) {
+  const diagnosticSelection = useMemo<Selection>(() => {
+    const base = sourceOnly
+      ? source?.sha === pr.baseSHA
+      : file.status === "removed";
+    return {
+      path: sourceOnly
+        ? source!.path
+        : base
+          ? file.previousPath || file.path
+          : file.path,
+      sha: sourceOnly ? source!.sha : base ? pr.baseSHA : pr.headSHA,
+      side: base ? "LEFT" : "RIGHT",
+      line: 1,
+      character: 0,
+      word: sourceOnly ? source!.path : file.path,
+      code: "",
+    };
+  }, [
+    sourceOnly,
+    source?.path,
+    source?.sha,
+    pr.baseSHA,
+    pr.headSHA,
+    file.path,
+    file.previousPath,
+    file.status,
+  ]);
+  const diagnostics = useDiagnostics(diagnosticCache, diagnosticSelection);
+  const [showDiagnostics, setShowDiagnostics] = useState(true);
+  const diagnosticItems =
+    showDiagnostics && diagnostics.state.status === "ready"
+      ? diagnostics.state.items
+      : [];
+  const diagnosticRevision =
+    diagnosticSelection.side === "LEFT" ? "Base" : "Head";
+  const diagnosticSummary = (
+    <DiagnosticSummary
+      state={diagnostics.state}
+      visible={showDiagnostics}
+      revision={diagnosticRevision}
+      onToggle={() => setShowDiagnostics((value) => !value)}
+      onRetry={diagnostics.retry}
+    />
+  );
   const actionOwner = useId();
   const sourcePanel = useRef<HTMLDivElement>(null);
   const diffPanel = useRef<HTMLDivElement>(null);
@@ -548,6 +625,29 @@ function FileCodePanel({
     cancelTimers();
     actionRef.current = next;
     setActions(next);
+  }
+  function diagnosticActions(
+    element: HTMLElement,
+    items: ReviewItem[],
+    code: string,
+  ) {
+    const location = items[0]?.location;
+    if (!location) return;
+    showActions({
+      element,
+      selection: {
+        ...diagnosticSelection,
+        line: location.line + 1,
+        character: location.character,
+        word: "Diagnostics",
+        code,
+      },
+      activated: true,
+      pinned: true,
+      commentable: false,
+      scope: "diagnostic",
+      diagnostics: items,
+    });
   }
   function fileTools(element: HTMLElement, path: string, sha: string) {
     showActions({
@@ -702,6 +802,7 @@ function FileCodePanel({
               <h2>{file.path}</h2>
             </div>
             <div className="file-review-controls">
+              {diagnosticSummary}
               <button
                 type="button"
                 aria-label={`Code tools for ${file.path}`}
@@ -821,6 +922,18 @@ function FileCodePanel({
                     code: line.text,
                     sha: position?.side === "LEFT" ? pr.baseSHA : pr.headSHA,
                   });
+                  const diagnosticLine =
+                    (diagnosticSelection.side === "LEFT"
+                      ? line.oldLine
+                      : line.newLine) ?? 0;
+                  const rowDiagnostics =
+                    diagnosticLine > 0
+                      ? diagnosticsForLine(
+                          diagnosticItems,
+                          diagnosticSelection.path,
+                          diagnosticLine - 1,
+                        )
+                      : [];
                   return (
                     <div
                       className={`code-row ${line.kind} ${!original ? "expanded-context" : ""} ${range.selected(points.LEFT) || range.selected(points.RIGHT) ? "comment-range-selected" : ""}`}
@@ -852,32 +965,53 @@ function FileCodePanel({
                           </span>
                         );
                       })}
-                      <span className="diff-marker" aria-hidden="true">
-                        {line.kind === "add"
-                          ? "+"
-                          : line.kind === "delete"
-                            ? "-"
-                            : ""}
+                      <span className="diff-marker">
+                        {rowDiagnostics.length ? (
+                          <DiagnosticMarker
+                            items={rowDiagnostics}
+                            revision={diagnosticRevision}
+                            onOpen={(element) =>
+                              diagnosticActions(
+                                element,
+                                rowDiagnostics,
+                                line.text,
+                              )
+                            }
+                          />
+                        ) : (
+                          <span aria-hidden="true">
+                            {line.kind === "add"
+                              ? "+"
+                              : line.kind === "delete"
+                                ? "-"
+                                : ""}
+                          </span>
+                        )}
                       </span>
                       <code>
                         {position ? (
                           <Tokens
                             code={line.text}
                             spans={diffSyntax.lines[renderedIndex]}
-                            annotations={annotationsForLine(
-                              annotations,
-                              annotations?.sha === pr.baseSHA &&
+                            annotations={withDiagnostics(
+                              annotationsForLine(
+                                annotations,
+                                annotations?.sha === pr.baseSHA &&
+                                  line.oldLine !== undefined
+                                  ? file.previousPath || file.path
+                                  : file.path,
+                                annotations?.sha === pr.baseSHA &&
+                                  line.oldLine !== undefined
+                                  ? pr.baseSHA
+                                  : pr.headSHA,
+                                (annotations?.sha === pr.baseSHA &&
                                 line.oldLine !== undefined
-                                ? file.previousPath || file.path
-                                : file.path,
-                              annotations?.sha === pr.baseSHA &&
-                                line.oldLine !== undefined
-                                ? pr.baseSHA
-                                : pr.headSHA,
-                              (annotations?.sha === pr.baseSHA &&
-                              line.oldLine !== undefined
-                                ? line.oldLine
-                                : (line.newLine ?? -1)) - 1,
+                                  ? line.oldLine
+                                  : (line.newLine ?? -1)) - 1,
+                                line.text,
+                              ),
+                              rowDiagnostics,
+                              diagnosticLine - 1,
                               line.text,
                             )}
                             onIntent={(element, word, column, intent) =>
@@ -939,7 +1073,8 @@ function FileCodePanel({
           <div className="code-footnote">
             <span className="live-dot" />
             Hover or select a symbol for code actions. Drag line numbers or
-            Shift-click to comment on a range. Submit drafts from Review.
+            Shift-click to comment on a range. Review drafts using the controls
+            below the PR title.
             {(diffSyntax.limited || sourceSyntax.limited) &&
               " Syntax highlighting unavailable for this content; showing plain text."}
           </div>
@@ -956,6 +1091,7 @@ function FileCodePanel({
               <h2>{source.path}</h2>
             </div>
             <div className="source-review-controls">
+              {diagnosticSummary}
               <button
                 type="button"
                 aria-label={`Code tools for ${source.path}`}
@@ -1009,6 +1145,11 @@ function FileCodePanel({
             <div className="code-table">
               {visibleSource.map((code, offset) => {
                 const i = sourceStart + offset;
+                const rowDiagnostics = diagnosticsForLine(
+                  diagnosticItems,
+                  source.path,
+                  i,
+                );
                 return (
                   <div
                     className={`code-row source-row ${source.highlight === i ? "target-line" : ""}`}
@@ -1016,14 +1157,28 @@ function FileCodePanel({
                     data-source-line={i}
                   >
                     <span className="line-number">{i + 1}</span>
+                    <span className="source-diagnostic-gutter">
+                      <DiagnosticMarker
+                        items={rowDiagnostics}
+                        revision={diagnosticRevision}
+                        onOpen={(element) =>
+                          diagnosticActions(element, rowDiagnostics, code)
+                        }
+                      />
+                    </span>
                     <code>
                       <Tokens
                         code={code}
                         spans={sourceSyntax.lines[i]}
-                        annotations={annotationsForLine(
-                          annotations,
-                          source.path,
-                          source.sha,
+                        annotations={withDiagnostics(
+                          annotationsForLine(
+                            annotations,
+                            source.path,
+                            source.sha,
+                            i,
+                            code,
+                          ),
+                          rowDiagnostics,
                           i,
                           code,
                         )}
@@ -1072,11 +1227,6 @@ function FileCodePanel({
           onComment={(selected) => {
             closeActions();
             onComment(selected);
-          }}
-          onAsk={(selected) => {
-            closeActions();
-            onSelect(selected);
-            onAsk();
           }}
         />
       )}

@@ -37,12 +37,7 @@ describe("capability-gated review actions", () => {
         ],
         true,
       ),
-    ).toEqual([
-      "diagnostics",
-      "documentSymbols",
-      "workspaceSymbols",
-      "inlayHints",
-    ]);
+    ).toEqual(["inlayHints"]);
     expect(availableActions([], true)).toEqual([]);
   });
   it("does not advertise unsupported edits or annotations", () => {

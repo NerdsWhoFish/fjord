@@ -1,8 +1,16 @@
 import { useEffect, useRef } from "react";
 import { ThemeToggle } from "./ThemeToggle";
 import "./settings-menu.css";
+import "./mcp-results.css";
+import type { SessionState } from "./session-client";
 
-export function SettingsMenu() {
+export function SettingsMenu({
+  session,
+  onRetrySession,
+}: {
+  session?: SessionState;
+  onRetrySession?: () => void;
+} = {}) {
   const menu = useRef<HTMLDetailsElement>(null);
   const trigger = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -55,13 +63,47 @@ export function SettingsMenu() {
         </svg>
         <span>Settings</span>
       </summary>
-      <div
-        className="settings-panel"
-        role="group"
-        aria-label="Appearance settings"
-      >
+      <div className="settings-panel" role="group" aria-label="Fjord settings">
         <span className="eyebrow">APPEARANCE</span>
         <ThemeToggle />
+        {session && session.status !== "disabled" && (
+          <section className="mcp-connection" aria-label="MCP connection">
+            <span className="eyebrow">AI VIA MCP</span>
+            <p role="status">
+              {session.status === "connected"
+                ? "Ready for your AI client."
+                : session.status === "connecting"
+                  ? "Preparing review session..."
+                  : "Reconnecting review session..."}
+            </p>
+            <p>
+              Add this Streamable HTTP server to your preferred MCP client. Your
+              client can read this review, show code, and propose draft
+              comments.
+            </p>
+            <label htmlFor="mcp-server-url">Server URL</label>
+            <input
+              id="mcp-server-url"
+              readOnly
+              value={
+                typeof location === "undefined"
+                  ? "/mcp"
+                  : `${location.origin}/mcp`
+              }
+              onFocus={(event) => event.currentTarget.select()}
+            />
+            {session.id && (
+              <p className="mcp-session-id">
+                Review session: <code>{session.id}</code>
+              </p>
+            )}
+            {session.error && <p role="alert">{session.error}</p>}
+            {session.status === "retrying" && (
+              <button onClick={onRetrySession}>Retry connection</button>
+            )}
+            <p>Comments stay drafts until you submit them.</p>
+          </section>
+        )}
       </div>
     </details>
   );

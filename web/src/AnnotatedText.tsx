@@ -18,7 +18,9 @@ export function AnnotatedText({
 }) {
   if (
     !annotations ||
-    (!annotations.highlights.length && !annotations.hints.length)
+    (!annotations.highlights.length &&
+      !annotations.hints.length &&
+      !annotations.diagnostics?.length)
   )
     return <SyntaxText text={text} start={start} spans={spans} />;
   return (
@@ -38,8 +40,18 @@ export function AnnotatedText({
                 {part.hint.paddingRight ? " " : ""}
               </span>
             );
-          const content = (
+          const syntax = (
             <SyntaxText text={part.text} start={part.start} spans={spans} />
+          );
+          const content = part.diagnostic ? (
+            <span
+              className={`code-diagnostic diagnostic-${part.diagnostic.severity}`}
+              title={part.diagnostic.message}
+            >
+              {syntax}
+            </span>
+          ) : (
+            syntax
           );
           return part.highlight ? (
             <mark

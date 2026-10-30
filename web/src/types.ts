@@ -93,6 +93,7 @@ export interface DraftComment {
   startLine?: number;
   startSide?: Side;
   body: string;
+  source?: "ai";
 }
 export interface ThreadComment {
   id: number;
@@ -143,6 +144,5 @@ export interface SourceView {
   workspace?: string;
 }
 export interface Config {
-  aiEnabled: boolean;
   telemetryEnabled: boolean;
 }

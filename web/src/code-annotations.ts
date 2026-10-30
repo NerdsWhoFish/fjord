@@ -1,8 +1,10 @@
-import type { CodeAnnotations, InlayHint } from "./types";
+import type { CodeAnnotations, InlayHint, ReviewItem } from "./types";
+import { diagnosticSeverity } from "./inline-diagnostics";
 
 export interface LineAnnotations {
   highlights: { start: number; end: number; kind: string }[];
   hints: { position: number; hint: InlayHint }[];
+  diagnostics?: { start: number; end: number; item: ReviewItem }[];
 }
 
 const empty: LineAnnotations = { highlights: [], hints: [] };
@@ -88,7 +90,13 @@ export function annotationsForLine(
 }
 
 export type AnnotationPart =
-  | { kind: "text"; text: string; start: number; highlight?: string }
+  | {
+      kind: "text";
+      text: string;
+      start: number;
+      highlight?: string;
+      diagnostic?: { severity: string; message: string };
+    }
   | { kind: "hint"; hint: InlayHint };
 
 export function annotationParts(
@@ -107,6 +115,10 @@ export function annotationParts(
     if (range.start > start && range.start < end) boundaries.add(range.start);
     if (range.end > start && range.end < end) boundaries.add(range.end);
   });
+  annotations.diagnostics?.forEach((range) => {
+    if (range.start > start && range.start < end) boundaries.add(range.start);
+    if (range.end > start && range.end < end) boundaries.add(range.end);
+  });
   hints.forEach(({ position }) => boundaries.add(position));
   const points = [...boundaries].sort((a, b) => a - b);
   const parts: AnnotationPart[] = [];
@@ -121,12 +133,49 @@ export function annotationParts(
     );
     const highlight =
       matches.find((range) => range.kind === "write") || matches[0];
+    const diagnostics = (annotations.diagnostics || [])
+      .filter((range) => range.start <= position && range.end >= next)
+      .map((range) => range.item);
     parts.push({
       kind: "text",
       text: text.slice(position - start, next - start),
       start: position,
       highlight: highlight?.kind,
+      ...(diagnostics.length
+        ? {
+            diagnostic: {
+              severity: diagnosticSeverity(diagnostics),
+              message: diagnostics.map((item) => item.label).join("\n"),
+            },
+          }
+        : {}),
     });
   });
   return parts;
+}
+
+export function withDiagnostics(
+  annotations: LineAnnotations,
+  items: ReviewItem[],
+  line: number,
+  code: string,
+): LineAnnotations {
+  return {
+    ...annotations,
+    diagnostics: items.flatMap((item) => {
+      const location = item.location;
+      if (!location) return [];
+      const start = boundary(
+        code,
+        line === location.line ? location.character : 0,
+        false,
+      );
+      const end = boundary(
+        code,
+        line === location.endLine ? location.endCharacter : code.length,
+        true,
+      );
+      return end > start ? [{ start, end, item }] : [];
+    }),
+  };
 }
