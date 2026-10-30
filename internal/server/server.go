@@ -16,7 +16,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/NerdsWhoFish/fjord/internal/assist"
 	"github.com/NerdsWhoFish/fjord/internal/github"
 	"github.com/NerdsWhoFish/fjord/internal/navigation"
 	"go.opentelemetry.io/otel"
@@ -42,17 +41,18 @@ type Navigation interface {
 }
 type Config struct {
 	Host       string
+	Origin     string
 	Assets     fs.FS
 	GitHub     GitHub
 	Navigation Navigation
-	AI         *assist.Client
 	FaroURL    string
 	Version    string
 }
 type Server struct {
-	config Config
-	slots  chan struct{}
-	mux    *http.ServeMux
+	config   Config
+	sessions *sessionStore
+	slots    chan struct{}
+	mux      *http.ServeMux
 }
 type target struct {
 	Owner  string `json:"owner"`
@@ -66,7 +66,12 @@ var identifier = regexp.MustCompile(`^[A-Za-z0-9_.-]+$`)
 var shaPattern = regexp.MustCompile(`^[a-fA-F0-9]{40}$`)
 
 func New(c Config) http.Handler {
-	s := &Server{config: c, slots: make(chan struct{}, 8), mux: http.NewServeMux()}
+	if c.Origin == "" {
+		c.Origin = "http://" + c.Host
+	}
+	origin, host, originErr := PublicAddress(c.Origin)
+	validOrigin := originErr == nil && origin == c.Origin && host == c.Host
+	s := &Server{config: c, sessions: newSessionStore(), slots: make(chan struct{}, 8), mux: http.NewServeMux()}
 	s.route("/api/config", s.configHandler)
 	s.route("/api/pr", s.load)
 	s.route("/api/content", s.content)
@@ -77,16 +82,22 @@ func New(c Config) http.Handler {
 	s.route("/api/review", s.review)
 	s.route("/api/comments", s.comments)
 	s.route("/api/reply", s.reply)
-	s.route("/api/assist", s.assist)
 	s.route("/api/telemetry", s.telemetry)
+	s.route("/api/session/open", s.openSession)
+	s.route("/api/session/sync", s.syncSession)
+	s.route("/api/session/close", s.closeSession)
+	mcpHandler := s.mcpHandler()
+	for _, method := range []string{"GET", "POST", "DELETE"} {
+		s.mux.Handle(method+" /mcp", mcpHandler)
+	}
 	s.mux.HandleFunc("GET /config.js", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-		config, _ := json.Marshal(map[string]bool{"aiEnabled": c.AI.Enabled(), "telemetryEnabled": c.FaroURL != ""})
+		config, _ := json.Marshal(map[string]bool{"telemetryEnabled": c.FaroURL != ""})
 		_, _ = fmt.Fprintf(w, "globalThis.__FJORD_CONFIG__=%s;\n", config)
 	})
 	s.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { jsonReply(w, map[string]string{"status": "ok"}) })
 	if c.Assets != nil {
-		s.mux.Handle("GET /", http.FileServerFS(c.Assets))
+		s.mux.Handle("GET /", staticHandler(c.Assets))
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
@@ -94,7 +105,7 @@ func New(c Config) http.Handler {
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("X-Frame-Options", "DENY")
 		w.Header().Set("Cache-Control", "no-store")
-		if r.Host != c.Host {
+		if !validOrigin || r.Host != c.Host {
 			http.Error(w, "invalid host", http.StatusForbidden)
 			return
 		}
@@ -105,7 +116,7 @@ func New(c Config) http.Handler {
 func (s *Server) route(path string, fn func(http.ResponseWriter, *http.Request) error) {
 	s.mux.HandleFunc("POST "+path, func(w http.ResponseWriter, r *http.Request) {
 		// Exact origin and JSON checks block drive-by web pages and DNS rebinding.
-		if r.Header.Get("Origin") != "http://"+s.config.Host || r.Header.Get("Sec-Fetch-Site") == "cross-site" {
+		if r.Header.Get("Origin") != s.config.Origin || r.Header.Get("Sec-Fetch-Site") == "cross-site" {
 			jsonError(w, "request origin is not allowed", http.StatusForbidden)
 			return
 		}
@@ -139,7 +150,13 @@ func (s *Server) route(path string, fn func(http.ResponseWriter, *http.Request) 
 		if err := fn(w, r); err != nil {
 			span.SetStatus(codes.Error, "operation failed")
 			slog.ErrorContext(ctx, "request failed", "operation", path)
-			jsonError(w, err.Error(), http.StatusBadRequest)
+			if errors.Is(err, errSessionGone) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusNotFound)
+				jsonReply(w, map[string]string{"error": err.Error(), "code": "session_not_found"})
+			} else {
+				jsonError(w, err.Error(), http.StatusBadRequest)
+			}
 			return
 		}
 		slog.InfoContext(ctx, "request completed", "operation", path)
@@ -172,6 +189,9 @@ func parsePR(raw string) (target, error) {
 		return target{}, errors.New("enter a GitHub PR URL such as https://github.com/owner/repo/pull/123")
 	}
 	p := strings.Split(strings.Trim(u.Path, "/"), "/")
+	if len(p) == 5 && (p[4] == "changes" || p[4] == "files") {
+		p = p[:4]
+	}
 	if len(p) != 4 || p[2] != "pull" {
 		return target{}, errors.New("URL must identify one GitHub pull request")
 	}
@@ -186,7 +206,7 @@ func (s *Server) configHandler(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(r, &in); err != nil {
 		return err
 	}
-	jsonReply(w, map[string]any{"aiEnabled": s.config.AI.Enabled(), "telemetryEnabled": s.config.FaroURL != ""})
+	jsonReply(w, map[string]any{"telemetryEnabled": s.config.FaroURL != ""})
 	return nil
 }
 func (s *Server) load(w http.ResponseWriter, r *http.Request) error {
@@ -336,19 +356,6 @@ func (s *Server) reply(w http.ResponseWriter, r *http.Request) error {
 	jsonReply(w, map[string]string{"url": u})
 	return nil
 }
-func (s *Server) assist(w http.ResponseWriter, r *http.Request) error {
-	var in assist.Request
-	if err := decode(r, &in); err != nil {
-		return err
-	}
-	answer, err := s.config.AI.Ask(r.Context(), in)
-	if err != nil {
-		return err
-	}
-	jsonReply(w, map[string]string{"answer": answer})
-	return nil
-}
-
 func ValidateFaro(raw string) error {
 	if raw == "" {
 		return nil

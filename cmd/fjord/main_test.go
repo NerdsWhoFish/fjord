@@ -23,3 +23,17 @@ func TestRequestHost(t *testing.T) {
 		}
 	}
 }
+
+func TestBrowserAddress(t *testing.T) {
+	host, origin, err := browserAddress("0.0.0.0:4727", "", "https://fjord.stout.zone")
+	if err != nil || host != "fjord.stout.zone" || origin != "https://fjord.stout.zone" {
+		t.Fatalf("public browser address: %q %q %v", host, origin, err)
+	}
+	host, origin, err = browserAddress("0.0.0.0:4727", "192.168.1.10", "")
+	if err != nil || host != "192.168.1.10:4727" || origin != "http://192.168.1.10:4727" {
+		t.Fatalf("LAN browser address: %q %q %v", host, origin, err)
+	}
+	if _, _, err := browserAddress("0.0.0.0:4727", "192.168.1.10", "https://fjord.stout.zone"); err == nil {
+		t.Fatal("accepted ambiguous public URL and host")
+	}
+}

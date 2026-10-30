@@ -48,6 +48,10 @@ func validBody(body string) bool {
 }
 
 func validateReview(review Review) error {
+	return validateReviewFields(review, true)
+}
+
+func validateReviewFields(review Review, submitting bool) error {
 	if !validSHA(review.HeadSHA) || !validSHA(review.BaseSHA) {
 		return errors.New("review must identify the full PR head and merge-base commit SHAs")
 	}
@@ -57,10 +61,10 @@ func validateReview(review Review) error {
 	if !validBody(review.Body) || len(review.Comments) > 100 {
 		return errors.New("review is too large; use at most 100 comments and 65536 bytes per body")
 	}
-	if review.Event == "REQUEST_CHANGES" && strings.TrimSpace(review.Body) == "" {
+	if submitting && review.Event == "REQUEST_CHANGES" && strings.TrimSpace(review.Body) == "" {
 		return errors.New("requesting changes requires a review summary")
 	}
-	if review.Event == "COMMENT" && strings.TrimSpace(review.Body) == "" && len(review.Comments) == 0 {
+	if submitting && review.Event == "COMMENT" && strings.TrimSpace(review.Body) == "" && len(review.Comments) == 0 {
 		return errors.New("a comment review requires a summary or inline comment")
 	}
 	for _, comment := range review.Comments {
@@ -71,6 +75,37 @@ func validateReview(review Review) error {
 			if comment.StartLine < 1 || comment.StartLine >= comment.Line || comment.StartSide != comment.Side {
 				return errors.New("multiline comments require start_line before line and matching LEFT or RIGHT start_side and side")
 			}
+		}
+	}
+	return nil
+}
+
+// ValidateDraft checks immutable revision and diff anchors without submitting.
+func ValidateDraft(pr PR, review Review) error {
+	if review.HeadSHA != pr.HeadSHA || review.BaseSHA != pr.BaseSHA {
+		return errors.New("draft must match this exact PR head and merge base")
+	}
+	if err := validateReviewFields(review, false); err != nil {
+		return err
+	}
+	return validateCommentRanges(pr, review.Comments)
+}
+
+func validateCommentRanges(pr PR, comments []Comment) error {
+	for _, comment := range comments {
+		found := false
+		start := comment.StartLine
+		if start == 0 {
+			start = comment.Line
+		}
+		for _, file := range pr.Files {
+			if file.Path == comment.Path && containsRange(file.Patch, comment.Side, start, comment.Line) {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return errors.New("an inline comment is outside the current diff; choose visible lines on one side within a single diff hunk")
 		}
 	}
 	return nil
@@ -96,21 +131,8 @@ func (c *Client) Review(ctx context.Context, owner, repo string, number int, rev
 	if pr.State != "open" {
 		return "", errors.New("only open pull requests can receive a review")
 	}
-	for _, comment := range review.Comments {
-		found := false
-		start := comment.StartLine
-		if start == 0 {
-			start = comment.Line
-		}
-		for _, file := range pr.Files {
-			if file.Path == comment.Path && containsRange(file.Patch, comment.Side, start, comment.Line) {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return "", errors.New("an inline comment is outside the current diff; choose visible lines on one side within a single diff hunk")
-		}
+	if err := validateCommentRanges(pr, review.Comments); err != nil {
+		return "", err
 	}
 	input := struct {
 		CommitID string    `json:"commit_id"`

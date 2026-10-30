@@ -1,4 +1,7 @@
+# Architecture Decisions
+
 | # | Decision | In one line |
 | --- | --- | --- |
 | [0001](0001-start-with-a-local-review-service-and-isolated-language-serv.md) | Start with a local review service and isolated language servers | Local review service with credentials on the host and isolated revision workspaces. |
 | [0002](0002-load-operator-defined-language-servers-through-isolated-stdi.md) | Load operator-defined language servers through isolated stdio profiles | Keep Go and Terraform defaults while allowing operator-defined language servers. |
+| [0003](0003-connect-external-ai-clients-to-browser-review-sessions-throu.md) | Connect external AI clients to browser review sessions through MCP | Use MCP for revision-bound code inspection and acknowledged browser draft/navigation actions. |

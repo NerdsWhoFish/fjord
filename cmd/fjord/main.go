@@ -15,7 +15,6 @@ import (
 	"time"
 
 	"github.com/NerdsWhoFish/fjord"
-	"github.com/NerdsWhoFish/fjord/internal/assist"
 	"github.com/NerdsWhoFish/fjord/internal/github"
 	"github.com/NerdsWhoFish/fjord/internal/lspconfig"
 	"github.com/NerdsWhoFish/fjord/internal/navigation"
@@ -34,6 +33,7 @@ func main() {
 func run() error {
 	addr := flag.String("addr", "127.0.0.1:4727", "listen address")
 	browserHost := flag.String("host", "", "browser hostname or IP (required for wildcard listeners; no scheme or port)")
+	publicURL := flag.String("public-url", os.Getenv("FJORD_PUBLIC_URL"), "public browser origin for a reverse proxy, such as https://fjord.stout.zone")
 	configPath := flag.String("config", os.Getenv("FJORD_CONFIG"), "operator language-server YAML config (or FJORD_CONFIG)")
 	showVersion := flag.Bool("version", false, "print version")
 	flag.Parse()
@@ -58,10 +58,6 @@ func run() error {
 			slog.Error("telemetry shutdown failed")
 		}
 	}()
-	ai, err := assist.New(os.Getenv("FJORD_AI_ENDPOINT"), os.Getenv("FJORD_AI_MODEL"), os.Getenv("FJORD_AI_API_KEY"))
-	if err != nil {
-		return err
-	}
 	faro := os.Getenv("FJORD_FARO_URL")
 	if err = server.ValidateFaro(faro); err != nil {
 		return err
@@ -71,16 +67,16 @@ func run() error {
 		return errors.New("cannot bind listen address; choose an available address and port")
 	}
 	defer ln.Close()
-	host, err := requestHost(ln.Addr().String(), *browserHost)
+	host, origin, err := browserAddress(ln.Addr().String(), *browserHost, *publicURL)
 	if err != nil {
 		return err
 	}
 	nav := navigation.NewWithProfiles(profiles)
 	defer nav.Close()
-	srv := &http.Server{Handler: server.New(server.Config{Host: host, Assets: fjord.Assets(), GitHub: github.New(nil), Navigation: nav, AI: ai, FaroURL: faro, Version: version}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 150 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 * 1024}
+	srv := &http.Server{Handler: server.New(server.Config{Host: host, Origin: origin, Assets: fjord.Assets(), GitHub: github.New(nil), Navigation: nav, FaroURL: faro, Version: version}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 150 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 * 1024}
 	done := make(chan error, 1)
 	go func() { done <- srv.Serve(ln) }()
-	fmt.Printf("Fjord %s\nOpen http://%s\n", version, host)
+	fmt.Printf("Fjord %s\nOpen %s\n", version, origin)
 	select {
 	case err := <-done:
 		if !errors.Is(err, http.ErrServerClosed) {
@@ -91,6 +87,22 @@ func run() error {
 	finish, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	return srv.Shutdown(finish)
+}
+
+func browserAddress(listenAddr, browserHost, publicURL string) (host, origin string, err error) {
+	if publicURL != "" {
+		if browserHost != "" {
+			return "", "", errors.New("use either -public-url or -host, not both")
+		}
+		origin, host, err = server.PublicAddress(publicURL)
+		return host, origin, err
+	}
+	host, err = requestHost(listenAddr, browserHost)
+	if err != nil {
+		return "", "", err
+	}
+	origin, host, err = server.PublicAddress("http://" + host)
+	return host, origin, err
 }
 
 func requestHost(listenAddr, browserHost string) (string, error) {

@@ -9,7 +9,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/NerdsWhoFish/fjord/internal/assist"
 	"github.com/NerdsWhoFish/fjord/internal/github"
 	"github.com/NerdsWhoFish/fjord/internal/navigation"
 )
@@ -60,8 +59,7 @@ func (fakeNavigation) Inspect(_ context.Context, _, _, method string, _, _ int, 
 func (fakeNavigation) File(context.Context, string, string) (string, error) { return "", nil }
 func testServer() (http.Handler, *fakeGitHub) {
 	g := &fakeGitHub{}
-	ai, _ := assist.New("", "", "")
-	return New(Config{Host: "127.0.0.1:4727", GitHub: g, Navigation: fakeNavigation{}, AI: ai}), g
+	return New(Config{Host: "127.0.0.1:4727", GitHub: g, Navigation: fakeNavigation{}}), g
 }
 func request(h http.Handler, path, body, host, origin, contentType string) *httptest.ResponseRecorder {
 	r := httptest.NewRequest(http.MethodPost, "http://"+host+path, strings.NewReader(body))
@@ -109,8 +107,7 @@ func TestPRLoadAndMalformedInputs(t *testing.T) {
 	}
 }
 func TestLANHostOriginBoundary(t *testing.T) {
-	ai, _ := assist.New("", "", "")
-	h := New(Config{Host: "192.168.1.10:4727", AI: ai})
+	h := New(Config{Host: "192.168.1.10:4727"})
 	for _, tt := range []struct {
 		host, origin string
 		want         int
