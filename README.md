@@ -52,8 +52,17 @@ GitHub remains the source of truth.
 
 Use the **+** in the diff's line-number gutter to comment on an added, deleted, or context line.
 Choose **Add to review**, then submit the accumulated drafts from the **Review** panel.
-The **Dark mode** toggle is available on both the start page and review workspace.
-Fjord starts with your system theme and remembers an explicit choice in this browser.
+The **Theme** selector offers System, Light, Dark, and Dracula on both the start page and review workspace.
+System follows your OS preference; an explicit choice is remembered and synchronized across browser tabs.
+
+Changed files appear in an expandable folder tree with status icons, full-path tooltips, and viewed markers.
+Search matches current and previous paths, and the filter menu supports change status and unviewed files.
+
+Diffs and source panes include syntax highlighting for Go, JavaScript/TypeScript and JSX/TSX, Terraform/HCL, Python, shell, JSON, YAML, HTML/XML, CSS, Markdown, SQL, Rust, Ruby, Java, C/C++, C#, Swift, Dockerfiles, and TOML.
+Highlighting preserves symbol-click positions and runs in a disposable browser worker.
+Unknown formats remain plain text; inputs over 250,000 characters or expensive grammars also fall back to plain text so review controls remain responsive.
+Diff highlighting uses separate base/head text within each hunk; omitted context can limit grammar accuracy, while full source provides continuous lexical context.
+Syntax colors do not imply language-server support: semantic navigation currently supports Go.
 
 ## Navigation limits
 
@@ -107,6 +116,8 @@ Code, review text, credentials, raw repository identities, and provider bodies a
 
 The Go packages separate GitHub, navigation, AI transport, telemetry, and HTTP boundaries.
 `web/` contains React/TypeScript.
+Theme palettes live in `web/src/theme.css`; components consume semantic CSS variables for surfaces, controls, diff states, file-tree states, and syntax tokens.
+To add a named theme, define its palette, extend the theme choices in `web/src/theme.ts` and `web/src/ThemeToggle.tsx`, and include its contrast cases in `web/src/theme.test.ts`.
 `make check` and CI require real `gopls` and a supported sandbox.
 `make test` runs Go unit tests; use `FJORD_TEST_GOPLS=1 make test` to include language-server integration tests.
 

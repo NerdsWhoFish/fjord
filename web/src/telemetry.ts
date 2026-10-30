@@ -38,6 +38,7 @@ export function startTelemetry() {
         "assist",
         "reply",
         "app.render",
+        "syntax.highlight",
       ],
     });
   } catch {

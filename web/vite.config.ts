@@ -2,6 +2,7 @@ import { defineConfig } from "vite";
 import type { ProxyOptions } from "vite";
 import react from "@vitejs/plugin-react";
 import { execFileSync } from "node:child_process";
+import { createRequire } from "node:module";
 
 const revision =
   process.env.APP_VERSION ||
@@ -27,6 +28,14 @@ const proxy: ProxyOptions = {
 
 export default defineConfig({
   plugins: [react()],
+  resolve: {
+    alias: {
+      // Workers need the entity table, not the browser's DOM-based decoder.
+      "decode-named-character-reference": createRequire(
+        import.meta.url,
+      ).resolve("decode-named-character-reference"),
+    },
+  },
   define: { __BUILD_SHA__: JSON.stringify(revision) },
   server: {
     host: "127.0.0.1",

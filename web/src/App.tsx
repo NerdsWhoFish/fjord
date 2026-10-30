@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { api } from "./api";
 import { Assistant } from "./Assistant";
 import { CodePanel } from "./CodePanel";
+import { FileTree } from "./FileTree";
 import { ThemeToggle } from "./ThemeToggle";
 import { demoBaseSource, demoPR, demoSource, demoThreads } from "./demo";
 import { emptyDraft, readDraft, ReviewPanel, writeDraft } from "./ReviewPanel";
@@ -461,9 +462,6 @@ export function App() {
       </div>
     );
 
-  const filtered = pr.files.filter((f) =>
-    f.path.toLowerCase().includes(filter.toLowerCase()),
-  );
   return (
     <div className="workspace">
       <nav className="skip-links" aria-label="Skip navigation">
@@ -508,46 +506,15 @@ export function App() {
           <span>Changed files</span>
           <span className="count">{pr.files.length}</span>
         </div>
-        <label className="sr-only" htmlFor="file-filter">
-          Filter changed files
-        </label>
-        <input
-          id="file-filter"
-          className="file-filter"
-          placeholder="Filter files..."
-          value={filter}
-          onChange={(e) => setFilter(e.target.value)}
+        <FileTree
+          key={`${pr.owner}/${pr.repo}/${pr.number}/${pr.headSHA}`}
+          files={pr.files}
+          selectedFile={selectedFile}
+          viewed={viewed}
+          filter={filter}
+          onFilter={setFilter}
+          onSelect={chooseFile}
         />
-        <nav aria-label="Changed files">
-          {filtered.map((f) => (
-            <button
-              className={`file-link ${selectedFile === f.path ? "active" : ""}`}
-              key={f.path}
-              onClick={() => chooseFile(f.path)}
-              title={f.path}
-            >
-              <span className={`file-letter ${f.status}`}>
-                {f.status === "added"
-                  ? "A"
-                  : f.status === "removed"
-                    ? "D"
-                    : "M"}
-              </span>
-              <span>
-                {f.path.split("/").slice(0, -1).join("/") && (
-                  <small>{f.path.split("/").slice(0, -1).join("/")}/</small>
-                )}
-                {f.path.split("/").at(-1)}
-              </span>
-              {viewed.has(f.path) && (
-                <span className="viewed-mark" aria-label="Viewed">
-                  ✓
-                </span>
-              )}
-            </button>
-          ))}
-          {!filtered.length && <p className="small">No matching files.</p>}
-        </nav>
         <div className="rail-bottom">
           <div className="progress-track">
             <span

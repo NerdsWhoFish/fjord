@@ -1,58 +1,28 @@
-import { useState } from "react";
+import { useSyncExternalStore } from "react";
+import { getThemeChoice, setThemeChoice, subscribeTheme } from "./theme";
+import type { ThemeChoice } from "./theme";
 
-type Theme = "light" | "dark";
-
-export function initializeTheme(): Theme {
-  let theme: Theme = matchMedia("(prefers-color-scheme: dark)").matches
-    ? "dark"
-    : "light";
-  try {
-    const saved = localStorage.getItem("fjord:theme");
-    if (saved === "light" || saved === "dark") theme = saved;
-  } catch {
-    // Storage can be disabled; the toggle still works for this page.
-  }
-  document.documentElement.dataset.theme = theme;
-  return theme;
-}
+export { initializeTheme } from "./theme";
 
 export function ThemeToggle() {
-  const [theme, setTheme] = useState<Theme>(() =>
-    document.documentElement.dataset.theme === "dark" ? "dark" : "light",
+  const choice = useSyncExternalStore(
+    subscribeTheme,
+    getThemeChoice,
+    () => "system",
   );
   return (
-    <button
-      type="button"
-      className="theme-toggle"
-      aria-label="Dark mode"
-      aria-pressed={theme === "dark"}
-      onClick={() => {
-        const next = theme === "dark" ? "light" : "dark";
-        document.documentElement.dataset.theme = next;
-        setTheme(next);
-        try {
-          localStorage.setItem("fjord:theme", next);
-        } catch {
-          // Preserve the choice in memory when storage is unavailable.
-        }
-      }}
-    >
-      <svg
-        width="16"
-        height="16"
-        viewBox="0 0 24 24"
-        fill="none"
-        aria-hidden="true"
+    <label className="theme-toggle">
+      <span>Theme</span>
+      <select
+        aria-label="Color theme"
+        value={choice}
+        onChange={(event) => setThemeChoice(event.target.value as ThemeChoice)}
       >
-        <path
-          d="M20.5 14A8.5 8.5 0 0 1 10 3.5 8.5 8.5 0 1 0 20.5 14Z"
-          stroke="currentColor"
-          strokeWidth="1.7"
-          strokeLinejoin="round"
-        />
-      </svg>
-      Dark mode{" "}
-      <span aria-hidden="true">{theme === "dark" ? "on" : "off"}</span>
-    </button>
+        <option value="system">System</option>
+        <option value="light">Light</option>
+        <option value="dark">Dark</option>
+        <option value="dracula">Dracula</option>
+      </select>
+    </label>
   );
 }

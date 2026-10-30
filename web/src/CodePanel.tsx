@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { linePosition, parsePatch, tokenize } from "./diff";
+import { SyntaxText } from "./SyntaxText";
+import { useSyntax } from "./useSyntax";
+import type { HighlightSpan, SyntaxRequest } from "./syntax-types";
 import type {
   ChangedFile,
   Method,
@@ -27,9 +30,11 @@ interface Props {
 
 function Tokens({
   code,
+  spans,
   onSelect,
 }: {
   code: string;
+  spans?: HighlightSpan[];
   onSelect: (word: string, column: number) => void;
 }) {
   if (code.length > 4096)
@@ -65,10 +70,15 @@ function Tokens({
             onClick={() => onSelect(token.text, token.column)}
             aria-label={`Inspect ${token.text}`}
           >
-            {token.text}
+            <SyntaxText text={token.text} start={token.column} spans={spans} />
           </button>
         ) : (
-          <span key={i}>{token.text}</span>
+          <SyntaxText
+            key={i}
+            text={token.text}
+            start={token.column}
+            spans={spans}
+          />
         ),
       )}
     </>
@@ -99,6 +109,19 @@ export function CodePanel({
     [source?.content],
   );
   const lines = useMemo(() => parsePatch(file.patch || ""), [file.patch]);
+  const diffRequest = useMemo<SyntaxRequest>(
+    () => ({ kind: "diff", path: file.path, lines }),
+    [file.path, lines],
+  );
+  const sourceRequest = useMemo<SyntaxRequest | undefined>(
+    () =>
+      source
+        ? { kind: "source", path: source.path, code: source.content }
+        : undefined,
+    [source?.path, source?.content],
+  );
+  const diffSyntax = useSyntax(diffRequest);
+  const sourceSyntax = useSyntax(sourceRequest);
   const diffWindow = pageRows(lines, diffPage);
   const visibleSource = sourceLines.slice(sourceStart, sourceStart + 200);
   useEffect(() => {
@@ -247,6 +270,7 @@ export function CodePanel({
                       {position ? (
                         <Tokens
                           code={line.text}
+                          spans={diffSyntax.lines[diffWindow.start + index]}
                           onSelect={(word, column) =>
                             onSelect(selectionFor(word, column))
                           }
@@ -273,6 +297,8 @@ export function CodePanel({
           <span className="live-dot" />
           Use + beside a line number to draft a comment. Submit drafts together
           from Review.
+          {(diffSyntax.limited || sourceSyntax.limited) &&
+            " Syntax highlighting unavailable for this content; showing plain text."}
         </div>
       </div>
       {source && (
@@ -332,6 +358,7 @@ export function CodePanel({
                     <code>
                       <Tokens
                         code={code}
+                        spans={sourceSyntax.lines[i]}
                         onSelect={(word, character) =>
                           onSelect({
                             path: source.path,
@@ -353,7 +380,7 @@ export function CodePanel({
         </div>
       )}
       {selection && (
-        <div className="symbol-bar" aria-label="Selected symbol actions">
+        <div className="symbol-bar" role="group" aria-label="Selected symbol actions">
           <div>
             <span className="eyebrow">FOLLOW THE CODE</span>
             <strong>{selection.word || `Line ${selection.line}`}</strong>
