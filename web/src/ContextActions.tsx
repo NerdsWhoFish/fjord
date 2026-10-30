@@ -22,9 +22,9 @@ export interface ActionAnchor {
 }
 
 const labels: Record<Method, string> = {
-  definition: "Go to definition",
-  implementation: "Go to implementation",
-  references: "Find references",
+  definition: "Definition",
+  implementation: "Implementation",
+  references: "References",
   hover: "Type information",
 };
 
@@ -62,7 +62,9 @@ export function ContextActions({
   const navigationEpoch = useRef(0);
   const currentSelection = useRef(selection);
   currentSelection.current = selection;
-  const focusTarget = useRef<"back" | Method | undefined>(undefined);
+  const focusTarget = useRef<"back" | "go-to" | Method | undefined>(undefined);
+  const [goToSelection, setGoToSelection] = useState<Selection>();
+  const goToOpen = goToSelection === selection;
   const [navigation, setNavigation] = useState<{
     selection: Selection;
     method: Method;
@@ -137,7 +139,7 @@ export function ContextActions({
       );
     button?.focus({ preventScroll: true });
     focusTarget.current = undefined;
-  }, [activeNavigation]);
+  }, [activeNavigation, goToOpen]);
   const [attempt, setAttempt] = useState(0);
   const request = useMemo(
     () => ({ selection, load: onCapabilities, attempt }),
@@ -215,7 +217,14 @@ export function ContextActions({
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
-  }, [anchor.element, anchor.selection, onClose, result, activeNavigation]);
+  }, [
+    anchor.element,
+    anchor.selection,
+    onClose,
+    result,
+    activeNavigation,
+    goToOpen,
+  ]);
 
   useEffect(() => {
     if (anchor.activated)
@@ -302,7 +311,7 @@ export function ContextActions({
             onClick={backToActions}
           >
             <span aria-hidden="true">&larr;</span>
-            <span>Back to actions</span>
+            <span>{goToOpen ? "Back to navigation" : "Back to actions"}</span>
           </button>
           <div
             className="context-navigation"
@@ -339,8 +348,12 @@ export function ContextActions({
                     <p className="context-support-note" role="status">
                       {activeNavigation.result.locations.length}{" "}
                       {activeNavigation.method === "references"
-                        ? "references"
-                        : "destinations"}
+                        ? activeNavigation.result.locations.length === 1
+                          ? "reference"
+                          : "references"
+                        : activeNavigation.result.locations.length === 1
+                          ? "destination"
+                          : "destinations"}
                     </p>
                     <div
                       className="context-destinations"
@@ -380,18 +393,49 @@ export function ContextActions({
         </>
       ) : (
         <>
-          {methods.map((method) => (
+          {goToOpen ? (
             <button
-              key={method}
               type="button"
-              disabled={busy}
-              data-navigation-focus={method}
-              onClick={() => void navigate(method)}
+              onClick={() => {
+                focusTarget.current = "go-to";
+                setGoToSelection(undefined);
+              }}
             >
-              <span>{labels[method]}</span>
+              <span aria-hidden="true">&larr;</span>
+              <span>Back to actions</span>
+            </button>
+          ) : methods.some((method) => method !== "hover") ? (
+            <button
+              type="button"
+              data-navigation-focus="go-to"
+              onClick={() => {
+                onEnter();
+                focusTarget.current = methods.find(
+                  (method) => method !== "hover",
+                );
+                setGoToSelection(selection);
+              }}
+            >
+              <span>Go to</span>
               <span aria-hidden="true">&rarr;</span>
             </button>
-          ))}
+          ) : null}
+          {methods
+            .filter((method) =>
+              goToOpen ? method !== "hover" : method === "hover",
+            )
+            .map((method) => (
+              <button
+                key={method}
+                type="button"
+                disabled={busy}
+                data-navigation-focus={method}
+                onClick={() => void navigate(method)}
+              >
+                <span>{labels[method]}</span>
+                <span aria-hidden="true">&rarr;</span>
+              </button>
+            ))}
           {selection.word && capabilityState.status === "loading" && (
             <p className="context-support-note" role="status">
               Loading code navigation...

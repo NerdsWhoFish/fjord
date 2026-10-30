@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type {
   DraftComment,
   PullRequest,
@@ -7,6 +7,11 @@ import type {
   ThreadComment,
 } from "./types";
 import { commentLineLabel } from "./comment-range";
+import { SyntaxText } from "./SyntaxText";
+import { useSyntax } from "./useSyntax";
+import type { SyntaxRequest } from "./syntax-types";
+import { insertSuggestion, suggestionUnavailable } from "./suggestion";
+import "./comment-composer.css";
 
 export interface ReviewDraft {
   comments: DraftComment[];
@@ -87,8 +92,34 @@ export function ReviewPanel({
   const [replying, setReplying] = useState<number>();
   const [error, setError] = useState("");
   const commentDialog = useRef<HTMLDialogElement>(null);
+  const commentInput = useRef<HTMLTextAreaElement>(null);
+  const suggestionSelection = useRef<
+    { start: number; end: number } | undefined
+  >(undefined);
   const submitDialog = useRef<HTMLDialogElement>(null);
+  const previewRequest = useMemo<SyntaxRequest | undefined>(
+    () =>
+      pendingComment
+        ? {
+            kind: "source",
+            path: pendingComment.path,
+            code: pendingComment.code,
+          }
+        : undefined,
+    [pendingComment?.path, pendingComment?.code],
+  );
+  const previewSyntax = useSyntax(previewRequest);
+  const previewLines = pendingComment?.code.split("\n") || [];
+  const suggestionReason = suggestionUnavailable(pendingComment);
+  useLayoutEffect(() => {
+    const selected = suggestionSelection.current;
+    if (!selected || !commentInput.current) return;
+    suggestionSelection.current = undefined;
+    commentInput.current.focus();
+    commentInput.current.setSelectionRange(selected.start, selected.end);
+  }, [comment]);
   useEffect(() => {
+    suggestionSelection.current = undefined;
     setComment("");
     if (pendingComment) commentDialog.current?.showModal();
     else commentDialog.current?.close();
@@ -270,6 +301,7 @@ export function ReviewPanel({
       ))}
       <dialog
         ref={commentDialog}
+        className="comment-composer"
         onCancel={onCloseComment}
         onClose={onCloseComment}
         aria-labelledby="comment-title"
@@ -332,15 +364,87 @@ export function ReviewPanel({
               : ""}{" "}
             / {pendingComment?.side === "LEFT" ? "base" : "head"}
           </p>
-          <pre className="selected-code">{pendingComment?.code}</pre>
-          <label htmlFor="line-comment">Comment</label>
+          <pre
+            className="selected-code"
+            tabIndex={0}
+            role="region"
+            aria-label="Selected code for comment"
+          >
+            <code>
+              {previewLines.map((line, index) => (
+                <span key={index}>
+                  <SyntaxText text={line} spans={previewSyntax.lines[index]} />
+                  {index < previewLines.length - 1 ? "\n" : ""}
+                </span>
+              ))}
+            </code>
+          </pre>
+          {previewSyntax.limited && (
+            <p className="composer-help">
+              Syntax highlighting is unavailable for this selection.
+            </p>
+          )}
+          <div className="comment-editor-heading">
+            <label htmlFor="line-comment">Comment</label>
+            <button
+              type="button"
+              className="suggestion-button"
+              disabled={!!suggestionReason}
+              aria-describedby={
+                suggestionReason ? "suggestion-unavailable" : undefined
+              }
+              onClick={() => {
+                if (
+                  !pendingComment ||
+                  suggestionReason ||
+                  !commentInput.current
+                )
+                  return;
+                const inserted = insertSuggestion(
+                  comment,
+                  pendingComment.code,
+                  commentInput.current.selectionStart,
+                  commentInput.current.selectionEnd,
+                );
+                suggestionSelection.current = {
+                  start: inserted.codeStart,
+                  end: inserted.codeEnd,
+                };
+                setComment(inserted.body);
+              }}
+            >
+              <svg
+                width="16"
+                height="16"
+                viewBox="0 0 16 16"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.4"
+                aria-hidden="true"
+              >
+                <path d="M5 4 1 8l4 4M11 4l4 4-4 4M9 2 7 14" />
+              </svg>
+              Insert suggestion
+            </button>
+          </div>
+          {suggestionReason && (
+            <p id="suggestion-unavailable" className="composer-help">
+              {suggestionReason}
+            </p>
+          )}
           <textarea
             id="line-comment"
+            ref={commentInput}
             autoFocus
-            rows={5}
+            rows={9}
             value={comment}
             onChange={(e) => setComment(e.target.value)}
+            aria-describedby="comment-markdown-help"
           />
+          <p id="comment-markdown-help" className="composer-help">
+            Markdown supported. Edit the code inside a suggestion to propose a
+            replacement.
+          </p>
           <div className="dialog-actions">
             <button type="button" onClick={onCloseComment}>
               Cancel

@@ -52,10 +52,14 @@ Branch protection remains responsible for dismissing stale approvals.
 GitHub remains the source of truth.
 
 Hover or activate a symbol to open its code actions.
+Choose **Go to** for Definition, References, or Implementation when the server supports them; Type information remains a separate action.
+Targets can be unchanged files anywhere in the extracted revision and open in the source pane without adding them to the changed-file list.
 Use the line-number gutter to select a line or drag a range, then choose the comment action.
 Shift-click extends a selection without dragging.
 Multiline comments stay on one side within one diff hunk; ranges cannot span omitted code.
 Choose **Add to review**, then submit the accumulated drafts from the **Review** panel.
+The larger comment editor syntax-highlights the selected code and accepts Markdown.
+Use **Insert suggestion** on head-side lines to insert a GitHub suggestion block prefilled with the selected code, then edit the replacement before adding it to your review.
 The hamburger **Settings** menu contains the **Theme** selector, offering System, Light, Dark, and Dracula.
 System follows your OS preference; an explicit choice is remembered and synchronized across browser tabs.
 
