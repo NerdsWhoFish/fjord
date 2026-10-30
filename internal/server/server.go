@@ -35,6 +35,7 @@ type GitHub interface {
 }
 type Navigation interface {
 	Prepare(context.Context, string, string, string, io.Reader) (string, error)
+	Capabilities(context.Context, string, string) (navigation.Capabilities, error)
 	Query(context.Context, string, string, string, int, int) (navigation.Result, error)
 	File(context.Context, string, string) (string, error)
 }
@@ -71,6 +72,7 @@ func New(c Config) http.Handler {
 	s.route("/api/workspace", s.workspace)
 	s.route("/api/workspace/file", s.file)
 	s.route("/api/navigate", s.navigate)
+	s.route("/api/navigation/capabilities", s.navigationCapabilities)
 	s.route("/api/review", s.review)
 	s.route("/api/comments", s.comments)
 	s.route("/api/reply", s.reply)
@@ -263,6 +265,22 @@ func (s *Server) navigate(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	result, err := s.config.Navigation.Query(r.Context(), in.ID, in.Path, in.Method, in.Line, in.Character)
+	if err != nil {
+		return err
+	}
+	jsonReply(w, result)
+	return nil
+}
+
+func (s *Server) navigationCapabilities(w http.ResponseWriter, r *http.Request) error {
+	var in struct {
+		ID   string `json:"id"`
+		Path string `json:"path"`
+	}
+	if err := decode(r, &in); err != nil {
+		return err
+	}
+	result, err := s.config.Navigation.Capabilities(r.Context(), in.ID, in.Path)
 	if err != nil {
 		return err
 	}

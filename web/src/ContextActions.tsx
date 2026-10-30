@@ -1,7 +1,12 @@
-import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { commentLineLabel } from "./comment-range";
 import type { Method, Selection } from "./types";
+import { watchCapabilities } from "./navigation-capabilities";
+import type {
+  CapabilityLoader,
+  CapabilityState,
+} from "./navigation-capabilities";
 
 export interface ActionAnchor {
   element: HTMLElement;
@@ -9,14 +14,6 @@ export interface ActionAnchor {
   commentable: boolean;
   activated: boolean;
   pinned?: boolean;
-}
-
-export function navigationMethods(path: string): Method[] {
-  if (/\.go$/i.test(path))
-    return ["definition", "implementation", "references", "hover"];
-  if (/\.(?:tf(?:vars)?(?:\.json)?|tofu)$/i.test(path))
-    return ["definition", "references", "hover"];
-  return [];
 }
 
 const labels: Record<Method, string> = {
@@ -33,6 +30,7 @@ interface Props {
   onEnter: () => void;
   onLeave: () => void;
   onNavigate: (selection: Selection, method: Method) => void;
+  onCapabilities: CapabilityLoader;
   onComment: (selection: Selection) => void;
   onAsk: (selection: Selection) => void;
 }
@@ -44,13 +42,36 @@ export function ContextActions({
   onEnter,
   onLeave,
   onNavigate,
+  onCapabilities,
   onComment,
   onAsk,
 }: Props) {
   const panel = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ left: 8, top: 8, ready: false });
   const { selection } = anchor;
-  const methods = selection.word ? navigationMethods(selection.path) : [];
+  const [attempt, setAttempt] = useState(0);
+  const request = useMemo(
+    () => ({ selection, load: onCapabilities, attempt }),
+    [selection, onCapabilities, attempt],
+  );
+  const [result, setResult] = useState<{
+    request: typeof request;
+    state: CapabilityState;
+  }>();
+  // Hide the previous anchor's actions before the new request effect runs.
+  const capabilityState: CapabilityState =
+    result?.request === request ? result.state : { status: "loading" };
+  const methods =
+    selection.word && capabilityState.status === "ready"
+      ? capabilityState.capabilities.methods
+      : [];
+  useEffect(
+    () =>
+      watchCapabilities(request.selection, request.load, (state) => {
+        setResult({ request, state });
+      }),
+    [request],
+  );
   useLayoutEffect(() => {
     function place() {
       if (!anchor.element.isConnected) {
@@ -67,18 +88,23 @@ export function ContextActions({
         onClose();
         return;
       }
-      const clip = anchor.element
-        .closest(".diff-scroll, .source-scroll")
-        ?.getBoundingClientRect();
-      if (
-        clip &&
-        (rect.bottom < clip.top ||
-          rect.top > clip.bottom ||
-          rect.right < clip.left ||
-          rect.left > clip.right)
-      ) {
-        onClose();
-        return;
+      let ancestor = anchor.element.parentElement;
+      while (ancestor) {
+        if (
+          ancestor.matches(".diff-scroll, .source-scroll, .continuous-diffs")
+        ) {
+          const clip = ancestor.getBoundingClientRect();
+          if (
+            rect.bottom < clip.top ||
+            rect.top > clip.bottom ||
+            rect.right < clip.left ||
+            rect.left > clip.right
+          ) {
+            onClose();
+            return;
+          }
+        }
+        ancestor = ancestor.parentElement;
       }
       const box = panel.current?.getBoundingClientRect();
       const width = box?.width || 270;
@@ -100,7 +126,7 @@ export function ContextActions({
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
-  }, [anchor.element, anchor.selection, onClose]);
+  }, [anchor.element, anchor.selection, onClose, result]);
 
   useEffect(() => {
     if (anchor.activated)
@@ -184,11 +210,32 @@ export function ContextActions({
           <span aria-hidden="true">&rarr;</span>
         </button>
       ))}
-      {selection.word && !methods.length && (
-        <p className="context-support-note">
-          Code navigation is available for Go and Terraform files.
+      {selection.word && capabilityState.status === "loading" && (
+        <p className="context-support-note" role="status">
+          Loading code navigation...
         </p>
       )}
+      {selection.word && capabilityState.status === "error" && (
+        <>
+          <p className="context-support-note" role="status">
+            Could not load code navigation. You can try again.
+          </p>
+          <button
+            type="button"
+            onClick={() => setAttempt((value) => value + 1)}
+          >
+            Retry code navigation
+          </button>
+        </>
+      )}
+      {selection.word &&
+        capabilityState.status === "ready" &&
+        (capabilityState.capabilities.message || !methods.length) && (
+          <p className="context-support-note" role="status">
+            {capabilityState.capabilities.message ||
+              "No code navigation actions are available for this file."}
+          </p>
+        )}
       {anchor.commentable && (
         <button
           type="button"

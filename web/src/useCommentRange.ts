@@ -9,6 +9,7 @@ interface Drag {
   range?: CommentRange;
   element: HTMLElement;
   valid: boolean;
+  container: Element | null;
 }
 
 export function useCommentRange(
@@ -47,7 +48,8 @@ export function useCommentRange(
       clientY,
     ) as HTMLElement | null;
     const row = element?.closest<HTMLElement>("[data-comment-row]");
-    if (!row) return undefined;
+    if (!row || row.closest(".diff-scroll") !== drag.current?.container)
+      return undefined;
     const button = element?.closest<HTMLElement>("[data-comment-side]");
     const side =
       button?.dataset.commentSide === "LEFT"
@@ -77,6 +79,7 @@ export function useCommentRange(
       range: result.range,
       valid: !!result.range,
       element: event.currentTarget,
+      container: event.currentTarget.closest(".diff-scroll"),
     };
     event.currentTarget.setPointerCapture(event.pointerId);
   }
@@ -85,7 +88,12 @@ export function useCommentRange(
     if (!drag.current || drag.current.pointer !== event.pointerId) return;
     event.preventDefault();
     const target = pointAt(event.clientX, event.clientY);
-    if (!target) return;
+    if (!target) {
+      drag.current.valid = false;
+      drag.current.range = undefined;
+      setError("Keep the selection within one file and diff hunk.");
+      return;
+    }
     const result = choose(drag.current.anchor, target.point);
     drag.current.valid = !!result.range;
     drag.current.range = result.range;

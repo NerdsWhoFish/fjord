@@ -1,22 +1,37 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useId,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
+import type { ReactNode } from "react";
 import { linePosition, parsePatch, tokenize } from "./diff";
 import { SyntaxText } from "./SyntaxText";
 import { useSyntax } from "./useSyntax";
 import type { HighlightSpan, SyntaxRequest } from "./syntax-types";
 import type {
   ChangedFile,
+  CodeLocation,
   Method,
+  NavigationCapabilities,
+  NavigationResult,
   PullRequest,
   Selection,
+  Side,
   SourceView,
 } from "./types";
-import { pageRows, sourceWindow } from "./window";
+import { sourceWindow } from "./window";
+import { ReviewNavigation } from "./ReviewNavigation";
+import { buildDiffContext } from "./diff-context";
 import { ContextActions } from "./ContextActions";
 import type { ActionAnchor } from "./ContextActions";
-import { commentRange, indexCommentLines, rangeFields } from "./comment-range";
+import { indexCommentLines, rangeFields } from "./comment-range";
 import type { CommentRange } from "./comment-range";
 import { useCommentRange } from "./useCommentRange";
 import "./code-actions.css";
+import "./review-flow.css";
 
 interface Props {
   pr: PullRequest;
@@ -28,7 +43,12 @@ interface Props {
   onMethod: (method: Method) => void;
   onSelect: (selection: Selection) => void;
   onNavigate: (selection?: Selection, method?: Method) => void;
-  onSource: (side: "LEFT" | "RIGHT") => void;
+  onCapabilities: (selection: Selection) => Promise<NavigationCapabilities>;
+  onSource: (side: Side, file?: ChangedFile) => void;
+  onLoadContent: (file: ChangedFile, side: Side) => Promise<string>;
+  navigation?: NavigationResult;
+  onLocation: (location: CodeLocation) => void;
+  onDismissNavigation: () => void;
   onCloseSource: () => void;
   onComment: (selection: Selection) => void;
   onAsk: () => void;
@@ -143,7 +163,109 @@ function Tokens({
   );
 }
 
-export function CodePanel({
+export function CodePanel(props: Props) {
+  const scroller = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const target = Array.from(
+      scroller.current?.querySelectorAll<HTMLElement>("[data-review-file]") ||
+        [],
+    ).find((element) => element.dataset.reviewFile === props.file.path);
+    if (target && scroller.current)
+      scroller.current.scrollTop +=
+        target.getBoundingClientRect().top -
+        scroller.current.getBoundingClientRect().top;
+  }, [props.file.path]);
+  return (
+    <section
+      className="continuous-review"
+      aria-label="Pull request code review"
+    >
+      <ReviewNavigation
+        result={props.navigation}
+        method={props.method}
+        busy={props.busy}
+        onLocation={props.onLocation}
+        onDismiss={props.onDismissNavigation}
+      />
+      <div className={`continuous-layout ${props.source ? "has-source" : ""}`}>
+        <div
+          className="continuous-diffs"
+          ref={scroller}
+          tabIndex={0}
+          role="region"
+          aria-label="All changed files"
+        >
+          {props.pr.files.map((file) => (
+            <DeferredFile
+              key={`${props.pr.baseSHA}/${props.pr.headSHA}/${file.path}`}
+              file={file}
+              active={file.path === props.file.path}
+            >
+              <FileCodePanel {...props} file={file} source={undefined} />
+            </DeferredFile>
+          ))}
+        </div>
+        {props.source && <FileCodePanel {...props} sourceOnly />}
+      </div>
+    </section>
+  );
+}
+
+function DeferredFile({
+  file,
+  active,
+  children,
+}: {
+  file: ChangedFile;
+  active: boolean;
+  children: ReactNode;
+}) {
+  const container = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(active);
+  useEffect(() => {
+    if (visible || !container.current) return;
+    if (typeof IntersectionObserver === "undefined") {
+      setVisible(true);
+      return;
+    }
+    const observer = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.isIntersecting) {
+          setVisible(true);
+          observer.disconnect();
+        }
+      },
+      { rootMargin: "600px" },
+    );
+    observer.observe(container.current);
+    return () => observer.disconnect();
+  }, [visible]);
+  useEffect(() => {
+    if (active) setVisible(true);
+  }, [active]);
+  return (
+    <div ref={container} data-review-file={file.path}>
+      {visible || active ? (
+        children
+      ) : (
+        <div
+          className="deferred-diff"
+          style={{
+            minHeight: Math.max(
+              150,
+              (file.patch?.split("\n").length || 1) * 25 + 180,
+            ),
+          }}
+        >
+          <h2>{file.path}</h2>
+          <p>Diff loads as you scroll.</p>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function FileCodePanel({
   pr,
   file,
   source,
@@ -151,15 +273,26 @@ export function CodePanel({
   onMethod,
   onSelect,
   onNavigate,
+  onCapabilities,
   onSource,
+  onLoadContent,
   onCloseSource,
   onComment,
   onAsk,
-}: Props) {
+  sourceOnly = false,
+}: Props & { sourceOnly?: boolean }) {
+  const actionOwner = useId();
   const sourcePanel = useRef<HTMLDivElement>(null);
   const diffPanel = useRef<HTMLDivElement>(null);
-  const [diffPage, setDiffPage] = useState(0);
   const [sourceStart, setSourceStart] = useState(0);
+  const [contextContent, setContextContent] = useState<{
+    base?: string;
+    head?: string;
+  }>();
+  const [expanded, setExpanded] = useState<Record<string, number>>({});
+  const [expanding, setExpanding] = useState<string>();
+  const [contextError, setContextError] = useState("");
+  const contextEpoch = useRef(0);
   const [actions, setActions] = useState<ActionAnchor>();
   const actionRef = useRef<ActionAnchor | undefined>(undefined);
   const openTimer = useRef<ReturnType<typeof setTimeout> | undefined>(
@@ -175,6 +308,48 @@ export function CodePanel({
   );
   const lines = useMemo(() => parsePatch(file.patch || ""), [file.patch]);
   const indexed = useMemo(() => indexCommentLines(lines), [lines]);
+  const contextRows = useMemo(
+    () => buildDiffContext(lines, contextContent, expanded),
+    [lines, contextContent, expanded],
+  );
+  async function expandContext(key: string) {
+    if (expanding) return;
+    const requestEpoch = ++contextEpoch.current;
+    setExpanding(key);
+    setContextError("");
+    try {
+      if (!contextContent) {
+        const [base, head] = await Promise.all([
+          file.status === "added"
+            ? Promise.resolve(undefined)
+            : onLoadContent(file, "LEFT"),
+          file.status === "removed"
+            ? Promise.resolve(undefined)
+            : onLoadContent(file, "RIGHT"),
+        ]);
+        if (contextEpoch.current !== requestEpoch) return;
+        setContextContent({ base, head });
+      }
+      if (contextEpoch.current === requestEpoch)
+        setExpanded((current) => ({
+          ...current,
+          [key]: (current[key] || 0) + 20,
+        }));
+    } catch {
+      if (contextEpoch.current === requestEpoch)
+        setContextError(
+          "Could not load omitted context. Try expanding it again.",
+        );
+    } finally {
+      if (contextEpoch.current === requestEpoch) setExpanding(undefined);
+    }
+  }
+  useEffect(
+    () => () => {
+      contextEpoch.current++;
+    },
+    [],
+  );
   const cancelTimers = useCallback(() => {
     clearTimeout(openTimer.current);
     clearTimeout(closeTimer.current);
@@ -210,6 +385,9 @@ export function CodePanel({
     closeTimer.current = setTimeout(() => closeActions(), 350);
   }, [closeActions]);
   function showActions(next: ActionAnchor) {
+    window.dispatchEvent(
+      new CustomEvent("fjord:code-actions", { detail: actionOwner }),
+    );
     cancelTimers();
     actionRef.current = next;
     setActions(next);
@@ -269,9 +447,18 @@ export function CodePanel({
     if (intent === "hover") openTimer.current = setTimeout(open, 400);
     else open();
   }
-  const diffRequest = useMemo<SyntaxRequest>(
-    () => ({ kind: "diff", path: file.path, lines }),
-    [file.path, lines],
+  const diffRequest = useMemo<SyntaxRequest | undefined>(
+    () =>
+      sourceOnly
+        ? undefined
+        : {
+            kind: "diff",
+            path: file.path,
+            lines: contextRows.map((row) =>
+              row.kind === "gap" ? { kind: "hunk", text: "" } : row.line,
+            ),
+          },
+    [file.path, contextRows, sourceOnly],
   );
   const sourceRequest = useMemo<SyntaxRequest | undefined>(
     () =>
@@ -282,213 +469,218 @@ export function CodePanel({
   );
   const diffSyntax = useSyntax(diffRequest);
   const sourceSyntax = useSyntax(sourceRequest);
-  const diffWindow = pageRows(lines, diffPage);
   const visibleSource = sourceLines.slice(sourceStart, sourceStart + 200);
   useEffect(() => {
-    setDiffPage(0);
     closeActions();
   }, [file.path, pr.baseSHA, pr.headSHA, closeActions]);
   useEffect(() => () => cancelTimers(), [cancelTimers]);
   useEffect(() => {
-    setSourceStart(sourceWindow(sourceLines.length, source?.highlight).start);
-  }, [source, sourceLines.length]);
+    function changed(event: Event) {
+      if ((event as CustomEvent<string>).detail !== actionOwner) closeActions();
+    }
+    window.addEventListener("fjord:code-actions", changed);
+    return () => window.removeEventListener("fjord:code-actions", changed);
+  }, [actionOwner, closeActions]);
   useEffect(() => {
-    if (diffPanel.current) diffPanel.current.scrollTop = 0;
+    setSourceStart(sourceWindow(sourceLines.length, source?.highlight).start);
     closeActions();
-  }, [diffPage, closeActions]);
+  }, [source, sourceLines.length, closeActions]);
+  useEffect(() => closeActions(), [sourceStart, closeActions]);
   useEffect(() => {
     const scroller =
       sourcePanel.current?.querySelector<HTMLElement>(".source-scroll");
-    if (scroller)
-      scroller.scrollTop =
-        source?.highlight !== undefined
-          ? Math.max(
-              0,
-              (source.highlight - sourceStart) * 27 - scroller.clientHeight / 2,
-            )
-          : 0;
+    if (!scroller) return;
+    const target = scroller.querySelector<HTMLElement>(
+      `[data-source-line="${source?.highlight}"]`,
+    );
+    if (target)
+      scroller.scrollTop +=
+        target.getBoundingClientRect().top -
+        scroller.getBoundingClientRect().top -
+        scroller.clientHeight / 2 +
+        target.getBoundingClientRect().height / 2;
+    else scroller.scrollTop = 0;
   }, [source, sourceStart]);
   return (
     <section
-      className={`code-stage ${source ? "with-source" : ""}`}
-      aria-label="Code review"
+      className={`code-stage ${sourceOnly ? "shared-source" : "stream-file"}`}
+      aria-label={
+        sourceOnly
+          ? `Source review for ${source?.path}`
+          : `Diff review for ${file.path}`
+      }
     >
-      <div className="diff-pane">
-        <div className="panel-heading">
-          <div>
-            <span className="eyebrow">CHANGED FILE</span>
-            <h2>{file.path}</h2>
-          </div>
-          <span className="file-status">{file.status}</span>
-        </div>
-        <div className="code-toolbar">
-          <span>
-            <b className="addition">+{file.additions}</b>{" "}
-            <b className="deletion">-{file.deletions}</b>
-          </span>
-          <div className="button-group">
-            <button
-              disabled={busy || file.status === "added"}
-              onClick={() => onSource("LEFT")}
-            >
-              Base source
-            </button>
-            <button
-              disabled={busy || file.status === "removed"}
-              onClick={() => onSource("RIGHT")}
-            >
-              Head source
-            </button>
-          </div>
-        </div>
-        {diffWindow.last > 0 && (
-          <div className="page-controls">
-            <button
-              disabled={diffWindow.current === 0}
-              onClick={() => setDiffPage(diffWindow.current - 1)}
-            >
-              Previous diff page
-            </button>
-            <span>
-              Rows {diffWindow.start + 1}-{diffWindow.end} of {lines.length}
-            </span>
-            <button
-              disabled={diffWindow.current === diffWindow.last}
-              onClick={() => setDiffPage(diffWindow.current + 1)}
-            >
-              Next diff page
-            </button>
-          </div>
-        )}
-        <div
-          className="diff-scroll"
-          ref={diffPanel}
-          tabIndex={0}
-          role="region"
-          aria-label={`Diff for ${file.path}`}
-        >
-          {lines.length ? (
-            <div className="code-table">
-              {diffWindow.rows.map((line, index) => {
-                const rowIndex = diffWindow.start + index;
-                const position = linePosition(line);
-                const points = indexed[rowIndex];
-                const selectionFor = (
-                  word: string,
-                  character: number,
-                ): Selection => ({
-                  path:
-                    position?.side === "LEFT"
-                      ? file.previousPath || file.path
-                      : file.path,
-                  line: position?.line || 1,
-                  side: position?.side || "RIGHT",
-                  character,
-                  word,
-                  code: line.text,
-                  sha: position?.side === "LEFT" ? pr.baseSHA : pr.headSHA,
-                });
-                return (
-                  <div
-                    className={`code-row ${line.kind} ${range.selected(points.LEFT) || range.selected(points.RIGHT) ? "comment-range-selected" : ""}`}
-                    key={rowIndex}
-                    data-comment-row={rowIndex}
-                  >
-                    <span className="line-tools">
-                      {position && (
-                        <button
-                          type="button"
-                          className="line-comment-action"
-                          title={`Comment on ${position.side === "LEFT" ? "base" : "head"} line ${position.line}`}
-                          aria-label={`Comment on ${position.side === "LEFT" ? "base" : "head"} line ${position.line}`}
-                          onClick={() => {
-                            closeActions();
-                            const point = points[position.side]!;
-                            const selected = commentRange(
-                              indexed,
-                              point,
-                              point,
-                            );
-                            if (selected.range)
-                              onComment(rangeSelection(selected.range));
-                          }}
-                        >
-                          +
-                        </button>
-                      )}
-                    </span>
-                    {(["LEFT", "RIGHT"] as const).map((side) => {
-                      const point = points[side];
-                      return point ? (
-                        <button
-                          key={side}
-                          type="button"
-                          className="line-number line-select"
-                          data-comment-side={side}
-                          title={`${side === "LEFT" ? "Base" : "Head"} line ${point.line}. Drag or Shift-click to select a range.`}
-                          aria-label={`Select ${side === "LEFT" ? "base" : "head"} line ${point.line} for a comment`}
-                          aria-pressed={range.selected(point)}
-                          {...range.handlers(point)}
-                        >
-                          {point.line}
-                        </button>
-                      ) : (
-                        <span className="line-number" key={side} />
-                      );
-                    })}
-                    <span className="diff-marker" aria-hidden="true">
-                      {line.kind === "add"
-                        ? "+"
-                        : line.kind === "delete"
-                          ? "-"
-                          : ""}
-                    </span>
-                    <code>
-                      {position ? (
-                        <Tokens
-                          code={line.text}
-                          spans={diffSyntax.lines[rowIndex]}
-                          onIntent={(element, word, column, intent) =>
-                            symbolIntent(
-                              element,
-                              selectionFor(word, column),
-                              true,
-                              intent,
-                            )
-                          }
-                          onLeave={leaveActions}
-                        />
-                      ) : (
-                        line.text
-                      )}
-                    </code>
-                  </div>
-                );
-              })}
+      {!sourceOnly && (
+        <div className="diff-pane">
+          <div className="panel-heading">
+            <div>
+              <span className="eyebrow">CHANGED FILE</span>
+              <h2>{file.path}</h2>
             </div>
-          ) : (
-            <div className="empty-message">
-              <h3>GitHub did not provide a text diff</h3>
-              <p>
-                This file may be binary, too large, or have no textual changes.
-                Open its source when available, or inspect it on GitHub.
-              </p>
+            <span className="file-status">{file.status}</span>
+          </div>
+          <div className="code-toolbar">
+            <span>
+              <b className="addition">+{file.additions}</b>{" "}
+              <b className="deletion">-{file.deletions}</b>
+            </span>
+            <div className="button-group">
+              <button
+                disabled={busy || file.status === "added"}
+                onClick={() => onSource("LEFT", file)}
+              >
+                Base source
+              </button>
+              <button
+                disabled={busy || file.status === "removed"}
+                onClick={() => onSource("RIGHT", file)}
+              >
+                Head source
+              </button>
+            </div>
+          </div>
+          <div
+            className="diff-scroll"
+            ref={diffPanel}
+            tabIndex={0}
+            role="region"
+            aria-label={`Diff for ${file.path}`}
+          >
+            {lines.length ? (
+              <div className="code-table">
+                {contextRows.map((row, renderedIndex) => {
+                  if (row.kind === "gap")
+                    return (
+                      <div className="diff-context-gap" key={row.key}>
+                        <button
+                          type="button"
+                          disabled={!!expanding}
+                          onClick={() => void expandContext(row.key)}
+                        >
+                          {expanding === row.key
+                            ? "Loading context..."
+                            : row.label}
+                        </button>
+                      </div>
+                    );
+                  const { line } = row;
+                  const original = row.kind === "original";
+                  const rowIndex = original ? row.index : undefined;
+                  const position = linePosition(line);
+                  const points =
+                    rowIndex !== undefined ? indexed[rowIndex] : {};
+                  const selectionFor = (
+                    word: string,
+                    character: number,
+                  ): Selection => ({
+                    path:
+                      position?.side === "LEFT"
+                        ? file.previousPath || file.path
+                        : file.path,
+                    line: position?.line || 1,
+                    side: position?.side || "RIGHT",
+                    character,
+                    word,
+                    code: line.text,
+                    sha: position?.side === "LEFT" ? pr.baseSHA : pr.headSHA,
+                  });
+                  return (
+                    <div
+                      className={`code-row ${line.kind} ${!original ? "expanded-context" : ""} ${range.selected(points.LEFT) || range.selected(points.RIGHT) ? "comment-range-selected" : ""}`}
+                      key={original ? `original-${rowIndex}` : row.key}
+                      data-comment-row={rowIndex}
+                    >
+                      {(["LEFT", "RIGHT"] as const).map((side) => {
+                        const point = points[side];
+                        return point ? (
+                          <button
+                            key={side}
+                            type="button"
+                            className="line-number line-select"
+                            data-comment-side={side}
+                            title={`${side === "LEFT" ? "Base" : "Head"} line ${point.line}. Drag or Shift-click to select a range.`}
+                            aria-label={`Select ${side === "LEFT" ? "base" : "head"} line ${point.line} for a comment`}
+                            aria-pressed={range.selected(point)}
+                            {...range.handlers(point)}
+                          >
+                            {point.line}
+                          </button>
+                        ) : (
+                          <span className="line-number" key={side}>
+                            {!original
+                              ? side === "LEFT"
+                                ? line.oldLine
+                                : line.newLine
+                              : ""}
+                          </span>
+                        );
+                      })}
+                      <span className="diff-marker" aria-hidden="true">
+                        {line.kind === "add"
+                          ? "+"
+                          : line.kind === "delete"
+                            ? "-"
+                            : ""}
+                      </span>
+                      <code>
+                        {position ? (
+                          <Tokens
+                            code={line.text}
+                            spans={diffSyntax.lines[renderedIndex]}
+                            onIntent={(element, word, column, intent) =>
+                              symbolIntent(
+                                element,
+                                selectionFor(word, column),
+                                original,
+                                intent,
+                              )
+                            }
+                            onLeave={leaveActions}
+                          />
+                        ) : (
+                          line.text
+                        )}
+                      </code>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="empty-message">
+                <h3>GitHub did not provide a text diff</h3>
+                <p>
+                  This file may be binary, too large, or have no textual
+                  changes. Open its source when available, or inspect it on
+                  GitHub.
+                </p>
+              </div>
+            )}
+          </div>
+          {contextError && (
+            <div className="range-feedback" role="status">
+              {contextError}
             </div>
           )}
-        </div>
-        {range.error && (
-          <div className="range-feedback" role="status">
-            {range.error}
+          {contextContent && (
+            <div className="diff-context-note">
+              Expanded context supports code navigation. Comments belong on
+              lines in the original diff.
+            </div>
+          )}
+          {range.error && (
+            <div className="range-feedback" role="status">
+              {range.error}
+            </div>
+          )}
+          <div className="code-footnote">
+            <span className="live-dot" />
+            Hover or select a symbol for code actions. Drag line numbers or
+            Shift-click to comment on a range. Submit drafts from Review.
+            {(diffSyntax.limited || sourceSyntax.limited) &&
+              " Syntax highlighting unavailable for this content; showing plain text."}
           </div>
-        )}
-        <div className="code-footnote">
-          <span className="live-dot" />
-          Hover or select a symbol for code actions. Drag line numbers or
-          Shift-click to comment on a range. Submit drafts from Review.
-          {(diffSyntax.limited || sourceSyntax.limited) &&
-            " Syntax highlighting unavailable for this content; showing plain text."}
         </div>
-      </div>
+      )}
       {source && (
         <div className="source-pane" ref={sourcePanel}>
           <div className="panel-heading">
@@ -541,6 +733,7 @@ export function CodePanel({
                   <div
                     className={`code-row source-row ${source.highlight === i ? "target-line" : ""}`}
                     key={i}
+                    data-source-line={i}
                   >
                     <span className="line-number">{i + 1}</span>
                     <code>
@@ -581,6 +774,7 @@ export function CodePanel({
           onClose={closeActions}
           onEnter={holdActions}
           onLeave={leaveActions}
+          onCapabilities={onCapabilities}
           onNavigate={(selected, action) => {
             closeActions();
             onSelect(selected);

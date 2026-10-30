@@ -29,19 +29,24 @@ type rpcError struct {
 }
 
 type rpcClient struct {
-	reader  io.ReadCloser
-	writer  io.WriteCloser
-	writeMu sync.Mutex
-	mu      sync.Mutex
-	next    int64
-	pending map[int64]chan rpcMessage
-	done    chan struct{}
-	once    sync.Once
-	stop    func()
+	reader   io.ReadCloser
+	writer   io.WriteCloser
+	writeMu  sync.Mutex
+	mu       sync.Mutex
+	next     int64
+	pending  map[int64]chan rpcMessage
+	done     chan struct{}
+	once     sync.Once
+	stop     func()
+	settings map[string]any
 }
 
 func newRPC(reader io.ReadCloser, writer io.WriteCloser, stop func()) *rpcClient {
-	c := &rpcClient{reader: reader, writer: writer, pending: make(map[int64]chan rpcMessage), done: make(chan struct{}), stop: stop}
+	return newRPCWithSettings(reader, writer, stop, nil)
+}
+
+func newRPCWithSettings(reader io.ReadCloser, writer io.WriteCloser, stop func(), settings map[string]any) *rpcClient {
+	c := &rpcClient{reader: reader, writer: writer, pending: make(map[int64]chan rpcMessage), done: make(chan struct{}), stop: stop, settings: settings}
 	go c.readLoop()
 	return c
 }
@@ -163,10 +168,16 @@ func (c *rpcClient) answer(message rpcMessage) {
 	switch message.Method {
 	case "workspace/configuration":
 		var params struct {
-			Items []json.RawMessage `json:"items"`
+			Items []struct {
+				Section string `json:"section"`
+			} `json:"items"`
 		}
 		_ = json.Unmarshal(message.Params, &params)
-		result = make([]any, len(params.Items))
+		items := make([]any, len(params.Items))
+		for i, item := range params.Items {
+			items[i] = settingSection(c.settings, item.Section)
+		}
+		result = items
 	case "client/registerCapability", "client/unregisterCapability", "window/workDoneProgress/create":
 	case "workspace/applyEdit":
 		result = map[string]any{"applied": false, "failureReason": "Fjord revision workspaces are read-only"}
@@ -175,6 +186,24 @@ func (c *rpcClient) answer(message rpcMessage) {
 		return
 	}
 	_ = c.send(map[string]any{"jsonrpc": "2.0", "id": message.ID, "result": result})
+}
+
+func settingSection(settings map[string]any, section string) any {
+	if section == "" {
+		return settings
+	}
+	if value, ok := settings[section]; ok {
+		return value
+	}
+	var current any = settings
+	for _, part := range strings.Split(section, ".") {
+		object, ok := current.(map[string]any)
+		if !ok {
+			return nil
+		}
+		current = object[part]
+	}
+	return current
 }
 
 func readMessage(r *bufio.Reader) (rpcMessage, error) {

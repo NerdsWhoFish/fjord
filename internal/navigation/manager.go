@@ -22,6 +22,8 @@ import (
 	"unicode/utf16"
 	"unicode/utf8"
 
+	"github.com/NerdsWhoFish/fjord/internal/lspconfig"
+
 	"go.opentelemetry.io/otel"
 	"go.opentelemetry.io/otel/attribute"
 	"go.opentelemetry.io/otel/codes"
@@ -75,9 +77,100 @@ type Manager struct {
 	mu         sync.Mutex
 	workspaces map[string]*workspace
 	closed     bool
+	profiles   []lspconfig.Profile
+	profileErr error
 }
 
-func New() *Manager { return &Manager{workspaces: make(map[string]*workspace)} }
+func New() *Manager { return NewWithProfiles(lspconfig.Defaults()) }
+
+func NewWithProfiles(profiles []lspconfig.Profile) *Manager {
+	m := &Manager{workspaces: make(map[string]*workspace)}
+	if err := lspconfig.Validate(profiles); err != nil {
+		m.profileErr = errors.New("invalid language-server profiles")
+		return m
+	}
+	// Freeze the operator configuration before requests can share it.
+	data, err := json.Marshal(profiles)
+	if err != nil || json.Unmarshal(data, &m.profiles) != nil {
+		m.profileErr = errors.New("invalid language-server profiles")
+	}
+	return m
+}
+
+type Capabilities struct {
+	Server     string   `json:"server"`
+	LanguageID string   `json:"languageId"`
+	Methods    []string `json:"methods"`
+	Message    string   `json:"message,omitempty"`
+}
+
+func (m *Manager) Capabilities(ctx context.Context, id, name string) (out Capabilities, resultErr error) {
+	ctx, span := otel.Tracer("fjord/navigation").Start(ctx, "navigation.capabilities")
+	defer func() {
+		if resultErr != nil {
+			span.SetStatus(codes.Error, "navigation capabilities failed")
+		}
+		span.End()
+	}()
+	out.Methods = []string{}
+	if m.profileErr != nil {
+		return out, m.profileErr
+	}
+	ctx, cancel := context.WithTimeout(ctx, 45*time.Second)
+	defer cancel()
+	w, err := m.get(id)
+	if err != nil {
+		return out, err
+	}
+	defer w.active.Add(-1)
+	w.mu.Lock()
+	defer w.mu.Unlock()
+	if _, err = readFile(w.root, name); err != nil {
+		return out, err
+	}
+	route, err := routeProfiles(w.root, name, m.profiles)
+	if errors.Is(err, errUnconfigured) {
+		out.Message = err.Error()
+		return out, nil
+	}
+	if err != nil {
+		return out, err
+	}
+	out.Server, out.LanguageID = route.displayName, route.languageID
+	if err := w.ensureServer(ctx, route); err != nil {
+		return out, err
+	}
+	for _, method := range []string{"definition", "implementation", "references", "hover"} {
+		if w.capabilities[method] {
+			out.Methods = append(out.Methods, method)
+		}
+	}
+	if len(out.Methods) == 0 {
+		out.Message = "The configured language server advertises no supported navigation actions."
+	}
+	return out, nil
+}
+
+func (w *workspace) ensureServer(ctx context.Context, route languageRoute) error {
+	if w.serverKey == route.key && !w.stopped() {
+		return nil
+	}
+	if w.client != nil {
+		w.client.close()
+		w.client = nil
+	}
+	loadCtx, span := otel.Tracer("fjord/navigation").Start(ctx, "navigation.server.start")
+	defer span.End()
+	span.SetAttributes(attribute.String("language", route.language))
+	client, capabilities, err := startProfileServer(loadCtx, w.dir, route.root, route.profile)
+	if err != nil {
+		span.SetStatus(codes.Error, "language server startup failed")
+		return err
+	}
+	w.client, w.capabilities, w.serverKey = client, capabilities, route.key
+	w.opened = make(map[string]bool)
+	return nil
+}
 
 // Prepare accepts a GitHub tar.gz for the exact supplied commit, never a mutable ref.
 func (m *Manager) Prepare(ctx context.Context, owner, repo, sha string, archive io.Reader) (string, error) {
@@ -189,6 +282,9 @@ func (m *Manager) File(ctx context.Context, id, name string) (string, error) {
 }
 
 func (m *Manager) Query(ctx context.Context, id, name, method string, line, character int) (out Result, resultErr error) {
+	if m.profileErr != nil {
+		return out, m.profileErr
+	}
 	allowed := map[string]string{"definition": "textDocument/definition", "implementation": "textDocument/implementation", "references": "textDocument/references", "hover": "textDocument/hover"}
 	lspMethod, ok := allowed[method]
 	if !ok {
@@ -217,28 +313,13 @@ func (m *Manager) Query(ctx context.Context, id, name, method string, line, char
 	if !validPosition(content, line, character) {
 		return Result{}, errors.New("invalid UTF-16 source position")
 	}
-	route, err := routeFile(w.root, name)
+	route, err := routeProfiles(w.root, name, m.profiles)
 	if err != nil {
 		return Result{}, err
 	}
 	span.SetAttributes(attribute.String("language", route.language))
-	if w.serverKey != route.key || w.stopped() {
-		if w.client != nil {
-			w.client.close()
-			w.client = nil
-		}
-		loadCtx, loadSpan := otel.Tracer("fjord/navigation").Start(ctx, "navigation.server.start")
-		loadSpan.SetAttributes(attribute.String("language", route.language))
-		client, capabilities, err := startLanguageServer(loadCtx, w.dir, route.root, route.language)
-		if err != nil {
-			loadSpan.SetStatus(codes.Error, "language server startup failed")
-		}
-		loadSpan.End()
-		if err != nil {
-			return Result{}, err
-		}
-		w.client, w.capabilities, w.serverKey = client, capabilities, route.key
-		w.opened = make(map[string]bool)
+	if err := w.ensureServer(ctx, route); err != nil {
+		return Result{}, err
 	}
 	if !w.capabilities[method] {
 		return Result{}, fmt.Errorf("%s language server does not support %s; choose another navigation action", route.displayName, method)

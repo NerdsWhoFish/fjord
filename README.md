@@ -5,7 +5,7 @@ Review GitHub pull requests with semantic code navigation and optional AI assist
 Keep the diff, surrounding code, and your review together.
 Follow symbols to their definitions or implementations, inspect references, and submit reviews to GitHub.
 This is an early local application.
-Semantic navigation supports Go and Terraform; the UI displays diffs in other languages too.
+Go and Terraform navigation work out of the box; operator-defined language servers add other languages.
 
 ## Run
 
@@ -61,12 +61,88 @@ System follows your OS preference; an explicit choice is remembered and synchron
 
 Changed files appear in an expandable folder tree with status icons, full-path tooltips, and viewed markers.
 Search matches current and previous paths, and the filter menu supports change status and unviewed files.
+The diff area scrolls through all changed files; selecting a tree entry jumps to that file.
+Use the context controls to reveal omitted lines above, below, or between hunks in increments of 20.
+Expanded context supports semantic navigation, while review comments remain limited to GitHub's original diff lines.
+Reference results populate the destination selector above the code so you can choose where to jump without scrolling to the end of a file.
+The source pane remains available for further symbol navigation from each destination.
 
 Diffs and source panes include syntax highlighting for Go, JavaScript/TypeScript and JSX/TSX, Terraform/HCL, Python, shell, JSON, YAML, HTML/XML, CSS, Markdown, SQL, Rust, Ruby, Java, C/C++, C#, Swift, Dockerfiles, and TOML.
 Highlighting preserves symbol-click positions and runs in a disposable browser worker.
 Unknown formats remain plain text; inputs over 250,000 characters or expensive grammars also fall back to plain text so review controls remain responsive.
 Diff highlighting uses separate base/head text within each hunk; omitted context can limit grammar accuracy, while full source provides continuous lexical context.
-Syntax colors do not imply language-server support: semantic navigation currently supports Go and Terraform.
+Syntax colors do not imply language-server support: semantic actions depend on the configured server's capabilities.
+
+## Bring your own language server
+
+Pass `-config /path/to/language-servers.yaml` or set `FJORD_CONFIG` to an operator-owned YAML file.
+Fjord reads it at startup, never from the reviewed repository. Restart after changes.
+The [Python example](examples/language-servers.yaml) configures Pyright through an explicit Node executable.
+Go (`go`), Terraform (`terraform`), and Terraform variables (`terraform-vars`) profiles remain available unless replaced or disabled.
+
+```yaml
+languageServers:
+  python:
+    command: [/opt/lsp/node, --openssl-config=/dev/null, /opt/lsp/node_modules/pyright/dist/pyright-langserver.js, --stdio]
+    files: ["**/*.py", "**/*.pyi"]
+    languageId: python
+    rootMarkers: [pyproject.toml, pyrightconfig.json, setup.py]
+    runtimePaths: [/opt/lsp]
+    settings:
+      python:
+        analysis:
+          typeCheckingMode: basic
+```
+
+Profiles support these fields:
+
+| Field | Purpose |
+| --- | --- |
+| `command` | Executable and literal arguments, with no shell expansion. Use an explicit interpreter for scripts. |
+| `files` | Repository-relative globs with `*`, `?`, and whole-directory `**`; first matching profile wins. |
+| `languageId` | LSP document language identifier. |
+| `rootMarkers` | Basenames used to find the nearest project root, falling back to the revision root. |
+| `rootRequired` | Fail if none of the root markers exist. |
+| `initializationOptions` | Server-specific options sent with `initialize`. |
+| `settings` | Server configuration sent after initialization and returned for configuration requests. |
+| `runtimePaths` | Explicit absolute read-only paths for runtime libraries, scripts, and installed dependencies. |
+| `environment` | Explicit non-sensitive server environment values; isolation and loader variables cannot be overridden. |
+| `adapter` | `generic` by default; `go` preserves Go's toolchain and dependency checks. |
+| `disabled` | Remove a named profile, for example `go: {disabled: true}`. |
+
+An explicit profile replaces the entire built-in profile of the same name.
+Explicit names sort alphabetically before remaining defaults, making overlapping matches deterministic.
+Configuration rejects unknown fields, duplicate keys, unsafe paths, and oversized inputs before the service starts.
+
+Install the server and its dependencies on the host or in a derived container image.
+Declare only the runtime paths it needs, never your whole home directory or credential folders.
+Some packaged runtimes, including Homebrew Node, require additional shared-library directories.
+Servers receive a clean environment, read-only source, temporary writable storage, and no network access.
+Repository configuration may influence the language server itself, so its executable and runtime paths must be trusted.
+Fjord does not run repository installation hooks or fetch dependencies for it.
+
+Symbol menus discover definition, implementation, references, and hover support from the server's actual `initialize` response.
+Unsupported actions stay hidden; server startup failures offer a retry without blocking comments or AI.
+The transport currently supports stdio and UTF-16 positions, not remote TCP/WebSocket servers or other position encodings.
+
+## Containers
+
+The Dockerfile includes `gopls`, `tofu-ls`, Go, GitHub CLI, and Bubblewrap.
+Build the base image and optional Python variant:
+
+```sh
+docker build --build-arg APP_VERSION="$(git rev-parse HEAD)" -t fjord:local .
+docker build -f examples/Dockerfile.python -t fjord:python .
+```
+
+Mount the example configuration read-only and pass `-config /etc/fjord/language-servers.yaml`.
+Provide the server's GitHub CLI identity through runtime credentials, and set `-host` to the hostname browsers use.
+The image runs as UID 10001 and listens on `0.0.0.0:4727`; allow writable temporary storage.
+
+The host kernel and container runtime must permit nested unprivileged user namespaces and Bubblewrap's required namespace operations.
+A Kubernetes cluster with user namespaces disabled cannot run this LSP isolation model unchanged.
+Fjord fails closed; do not work around that with a privileged container or by removing the sandbox.
+The container recipes have not yet been built or exercised in a container runtime; native macOS integration tests cover the language-server behavior.
 
 ## Navigation limits
 
@@ -84,7 +160,7 @@ Archive extraction rejects symlinks, hardlinks, special files, traversal, and ov
 The source pane cannot open files outside the extracted tree, including standard-library and dependency-cache files.
 Workspaces are temporary, bounded, and removed at shutdown.
 
-Python and TypeScript navigation, dependency provisioning, hosted accounts, check-run views, issue comments, and thread resolution remain future work.
+Dependency provisioning, hosted accounts, check-run views, issue comments, and thread resolution remain future work.
 The GitHub PR link provides actions not yet exposed here.
 
 ## AI assistance
@@ -130,6 +206,7 @@ Theme palettes live in `web/src/theme.css`; components consume semantic CSS vari
 To add a named theme, define its palette, extend the theme choices in `web/src/theme.ts` and `web/src/ThemeToggle.tsx`, and include its contrast cases in `web/src/theme.test.ts`.
 `make check` and CI require real `gopls`, `tofu-ls`, and a supported sandbox.
 `make test` runs Go unit tests; use `FJORD_TEST_GOPLS=1 FJORD_TEST_TOFU_LS=1 make test` to include language-server integration tests.
+Set `FJORD_TEST_PYRIGHT_CONFIG` to a working Python profile YAML to also exercise real sandboxed Pyright definitions, references, and hover.
 
 Goblin currently provides a foundation and UI concepts, not an implemented PR engine.
 Plannotator's edit-approval lifecycle differs from GitHub reviews.

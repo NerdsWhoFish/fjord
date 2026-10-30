@@ -1,0 +1,111 @@
+.continuous-review {
+  min-width: 0;
+}
+.continuous-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+.continuous-diffs {
+  max-height: 70svh;
+  overflow: auto;
+  scrollbar-color: var(--scrollbar) transparent;
+  scrollbar-width: thin;
+  overscroll-behavior: contain;
+}
+.continuous-diffs > [data-review-file] + [data-review-file] {
+  margin-top: 16px;
+}
+.stream-file .diff-scroll {
+  max-height: none;
+  overflow-x: auto;
+}
+.stream-file .panel-heading {
+  min-height: 62px;
+}
+.stream-file .code-footnote {
+  font-size: 10px;
+}
+.shared-source .source-pane {
+  border: 0;
+}
+.shared-source .source-scroll {
+  max-height: 55svh;
+}
+.deferred-diff {
+  border: 1px solid var(--line);
+  border-radius: 7px;
+  padding: 16px;
+  background: var(--white);
+  color: var(--muted);
+  font-size: 12px;
+}
+.deferred-diff h2 {
+  font:
+    500 12px/1.6 "IBM Plex Mono",
+    monospace;
+  color: var(--ink);
+  overflow-wrap: anywhere;
+}
+.review-navigation {
+  position: sticky;
+  top: 0;
+  z-index: 4;
+  margin-bottom: 12px;
+  padding: 10px 12px;
+  background: var(--white);
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  box-shadow: 0 4px 18px var(--shadow);
+  font-size: 12px;
+}
+.review-navigation-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 9px;
+}
+.review-navigation select {
+  flex: 1;
+  min-width: 150px;
+  max-width: 100%;
+  padding: 7px;
+}
+.review-navigation pre {
+  max-height: 160px;
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  font-size: 11px;
+}
+.diff-context-gap {
+  padding: 7px 12px;
+  background: var(--surface-muted);
+  border-block: 1px solid var(--line);
+}
+.diff-context-gap button {
+  padding: 5px 9px;
+  font-size: 11px;
+}
+.diff-context-note {
+  padding: 8px 12px;
+  color: var(--muted);
+  font-size: 11px;
+}
+.code-row.expanded-context {
+  background: var(--surface-muted);
+}
+@media (min-width: 1280px) {
+  .continuous-layout.has-source {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+}
+@media (max-width: 1279px) {
+  .continuous-layout.has-source .shared-source {
+    grid-row: 1;
+  }
+  .continuous-layout.has-source .continuous-diffs {
+    max-height: 50svh;
+  }
+}

@@ -17,6 +17,7 @@ import (
 	"github.com/NerdsWhoFish/fjord"
 	"github.com/NerdsWhoFish/fjord/internal/assist"
 	"github.com/NerdsWhoFish/fjord/internal/github"
+	"github.com/NerdsWhoFish/fjord/internal/lspconfig"
 	"github.com/NerdsWhoFish/fjord/internal/navigation"
 	"github.com/NerdsWhoFish/fjord/internal/server"
 	"github.com/NerdsWhoFish/fjord/internal/telemetry"
@@ -33,11 +34,16 @@ func main() {
 func run() error {
 	addr := flag.String("addr", "127.0.0.1:4727", "listen address")
 	browserHost := flag.String("host", "", "browser hostname or IP (required for wildcard listeners; no scheme or port)")
+	configPath := flag.String("config", os.Getenv("FJORD_CONFIG"), "operator language-server YAML config (or FJORD_CONFIG)")
 	showVersion := flag.Bool("version", false, "print version")
 	flag.Parse()
 	if *showVersion {
 		fmt.Println(version)
 		return nil
+	}
+	profiles, err := lspconfig.Load(*configPath)
+	if err != nil {
+		return err
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -69,7 +75,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	nav := navigation.New()
+	nav := navigation.NewWithProfiles(profiles)
 	defer nav.Close()
 	srv := &http.Server{Handler: server.New(server.Config{Host: host, Assets: fjord.Assets(), GitHub: github.New(nil), Navigation: nav, AI: ai, FaroURL: faro, Version: version}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 150 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 * 1024}
 	done := make(chan error, 1)

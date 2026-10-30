@@ -3,6 +3,7 @@ module github.com/NerdsWhoFish/fjord
 go 1.27.3
 
 require (
+	github.com/bmatcuk/doublestar/v4 v4.10.4
 	go.opentelemetry.io/contrib/bridges/otelslog v0.21.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.23.0
@@ -11,6 +12,7 @@ require (
 	go.opentelemetry.io/otel/sdk/log v1.47.0
 	go.opentelemetry.io/otel/trace v1.47.0
 	go.opentelemetry.io/proto/otlp v1.11.0
+	go.yaml.in/yaml/v3 v3.0.5
 	google.golang.org/protobuf v1.36.12
 )
 

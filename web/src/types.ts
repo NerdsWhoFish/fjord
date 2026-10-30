@@ -1,5 +1,11 @@
 export type Side = "LEFT" | "RIGHT";
 export type Method = "definition" | "implementation" | "references" | "hover";
+export interface NavigationCapabilities {
+  server: string;
+  languageId: string;
+  methods: Method[];
+  message?: string;
+}
 export type ReviewEvent = "COMMENT" | "APPROVE" | "REQUEST_CHANGES";
 export interface ChangedFile {
   path: string;

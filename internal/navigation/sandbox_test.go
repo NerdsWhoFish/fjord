@@ -72,6 +72,14 @@ func TestSandboxIsolation(t *testing.T) {
 	if err := os.WriteFile(outside, []byte("outside fixture"), 0600); err != nil {
 		t.Fatal(err)
 	}
+	runtimeDir, err := filepath.EvalSymlinks(t.TempDir())
+	if err != nil {
+		t.Fatal(err)
+	}
+	runtimeFile := filepath.Join(runtimeDir, "runtime-fixture.txt")
+	if err := os.WriteFile(runtimeFile, []byte("runtime fixture"), 0600); err != nil {
+		t.Fatal(err)
+	}
 	listener, err := net.Listen("tcp", "127.0.0.1:0")
 	if err != nil {
 		t.Fatal(err)
@@ -85,8 +93,8 @@ func TestSandboxIsolation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	env := []string{"FJORD_SANDBOX_CANARY=1", "FJORD_CANARY_OUTSIDE=" + outside, "FJORD_CANARY_INSIDE=" + inside, "FJORD_CANARY_WRITE=" + filepath.Join(dir, "home", "allowed.txt"), "FJORD_CANARY_ADDRESS=" + listener.Addr().String()}
-	cmd, cancel, err := sandboxCommand(dir, root, executable, runtime.GOROOT(), env, "-test.run=^TestSandboxCanaryHelper$")
+	env := []string{"FJORD_SANDBOX_CANARY=1", "FJORD_CANARY_OUTSIDE=" + outside, "FJORD_CANARY_INSIDE=" + inside, "FJORD_CANARY_WRITE=" + filepath.Join(dir, "home", "allowed.txt"), "FJORD_CANARY_ADDRESS=" + listener.Addr().String(), "FJORD_CANARY_RUNTIME=" + runtimeFile}
+	cmd, cancel, err := sandboxWithPaths(dir, root, executable, []string{runtime.GOROOT(), runtimeDir}, env, "-test.run=^TestSandboxCanaryHelper$")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -106,6 +114,12 @@ func TestSandboxCanaryHelper(t *testing.T) {
 	}
 	if _, err := os.ReadFile(os.Getenv("FJORD_CANARY_OUTSIDE")); err == nil {
 		t.Fatal("sandbox read outside workspace")
+	}
+	if _, err := os.ReadFile(os.Getenv("FJORD_CANARY_RUNTIME")); err != nil {
+		t.Fatal("sandbox cannot read configured runtime path")
+	}
+	if err := os.WriteFile(os.Getenv("FJORD_CANARY_RUNTIME"), []byte("changed"), 0600); err == nil {
+		t.Fatal("sandbox modified readonly runtime path")
 	}
 	if err := os.WriteFile(os.Getenv("FJORD_CANARY_INSIDE"), []byte("changed"), 0600); err == nil {
 		t.Fatal("sandbox modified source fixture")

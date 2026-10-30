@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import { api } from "./api";
 import { Assistant } from "./Assistant";
 import { CodePanel } from "./CodePanel";
@@ -10,9 +10,11 @@ import type { ReviewDraft } from "./ReviewPanel";
 import { captureError, startTelemetry } from "./telemetry";
 import type {
   CodeLocation,
+  ChangedFile,
   Config,
   Method,
   NavigationResult,
+  NavigationCapabilities,
   PullRequest,
   Selection,
   SourceView,
@@ -66,8 +68,82 @@ export function App() {
   const epoch = useRef(0);
   const prEpoch = useRef(0);
   const threadEpoch = useRef(0);
-  const workspaces = useRef(new Map<string, string>());
+  const workspaces = useRef(new Map<string, { id: string; expires: number }>());
+  const workspaceRequests = useRef(new Map<string, Promise<string>>());
+  const capabilityRequests = useRef(
+    new Map<
+      string,
+      { promise: Promise<NavigationCapabilities>; expires: number }
+    >(),
+  );
   const file = pr?.files.find((f) => f.path === selectedFile);
+
+  const ensureWorkspace = useCallback(
+    async (sha: string): Promise<string> => {
+      if (!pr) throw new Error("Open a pull request before following code.");
+      if (demo) return "demo";
+      const existing = workspaces.current.get(sha);
+      if (existing && existing.expires > Date.now()) return existing.id;
+      const pending = workspaceRequests.current.get(sha);
+      if (pending) return pending;
+      const currentPR = prEpoch.current;
+      const promise = api<{ id: string }>("workspace", {
+        owner: pr.owner,
+        repo: pr.repo,
+        sha,
+      })
+        .then(({ id }) => {
+          if (prEpoch.current === currentPR)
+            workspaces.current.set(sha, {
+              id,
+              expires: Date.now() + 15 * 60 * 1000,
+            });
+          return id;
+        })
+        .finally(() => {
+          if (workspaceRequests.current.get(sha) === promise)
+            workspaceRequests.current.delete(sha);
+        });
+      workspaceRequests.current.set(sha, promise);
+      return promise;
+    },
+    [pr, demo],
+  );
+
+  const navigationCapabilities = useCallback(
+    (selected: Selection): Promise<NavigationCapabilities> => {
+      if (demo)
+        return Promise.resolve({
+          server: "Sample workspace",
+          languageId: "go",
+          methods: ["definition", "implementation", "references", "hover"],
+        });
+      const key = `${selected.sha}:${selected.path}`;
+      const cached = capabilityRequests.current.get(key);
+      if (cached && cached.expires > Date.now()) return cached.promise;
+      const currentPR = prEpoch.current;
+      const promise = ensureWorkspace(selected.sha)
+        .then((id) =>
+          api<NavigationCapabilities>("navigation/capabilities", {
+            id,
+            path: selected.path,
+          }),
+        )
+        .catch((error) => {
+          if (prEpoch.current === currentPR) {
+            capabilityRequests.current.delete(key);
+            workspaces.current.delete(selected.sha);
+          }
+          throw error;
+        });
+      capabilityRequests.current.set(key, {
+        promise,
+        expires: Date.now() + 15 * 60 * 1000,
+      });
+      return promise;
+    },
+    [demo, ensureWorkspace],
+  );
 
   function changeDraft(next: ReviewDraft) {
     setDraft(next);
@@ -109,6 +185,8 @@ export function App() {
     setError("");
     setFilter("");
     workspaces.current.clear();
+    workspaceRequests.current.clear();
+    capabilityRequests.current.clear();
     setMobileTab("code");
   }
   async function reloadThreads(next = pr, isDemo = demo) {
@@ -180,27 +258,36 @@ export function App() {
     setThreads(demoThreads);
     setConfig({ aiEnabled: false, telemetryEnabled: false });
   }
-  async function openSource(side: "LEFT" | "RIGHT") {
-    if (!pr || !file) return;
+  const loadContent = useCallback(
+    async (target: ChangedFile, side: "LEFT" | "RIGHT"): Promise<string> => {
+      if (!pr) throw new Error("Open a pull request before loading source.");
+      const path =
+        side === "LEFT" ? target.previousPath || target.path : target.path;
+      const sha = side === "LEFT" ? pr.baseSHA : pr.headSHA;
+      if (demo)
+        return (side === "LEFT" ? demoBaseSource : demoSource)[path] || "";
+      return (
+        await api<{ content: string }>("content", {
+          owner: pr.owner,
+          repo: pr.repo,
+          sha,
+          path,
+        })
+      ).content;
+    },
+    [pr, demo],
+  );
+  async function openSource(side: "LEFT" | "RIGHT", target = file) {
+    if (!pr || !target) return;
     const requestEpoch = ++epoch.current;
     setNavigating(true);
     setError("");
-    const path = side === "LEFT" ? file.previousPath || file.path : file.path;
+    const path =
+      side === "LEFT" ? target.previousPath || target.path : target.path;
     const sha = side === "LEFT" ? pr.baseSHA : pr.headSHA;
     try {
-      const result = demo
-        ? {
-            content:
-              (side === "LEFT" ? demoBaseSource : demoSource)[path] || "",
-          }
-        : await api<{ content: string }>("content", {
-            owner: pr.owner,
-            repo: pr.repo,
-            sha,
-            path,
-          });
-      if (epoch.current === requestEpoch)
-        setSource({ path, sha, content: result.content });
+      const content = await loadContent(target, side);
+      if (epoch.current === requestEpoch) setSource({ path, sha, content });
     } catch (error) {
       if (epoch.current === requestEpoch)
         setError(
@@ -237,6 +324,14 @@ export function App() {
           highlight: location.line,
           workspace,
         });
+    } catch (error) {
+      captureError(error, "navigate");
+      if (epoch.current === requestEpoch)
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Could not load navigation target.",
+        );
     } finally {
       if (epoch.current === requestEpoch) setNavigating(false);
     }
@@ -250,19 +345,7 @@ export function App() {
     setError("");
     setNavResult(undefined);
     try {
-      let workspace = workspaces.current.get(nextSelection.sha);
-      if (!workspace) {
-        workspace = demo
-          ? "demo"
-          : (
-              await api<{ id: string }>("workspace", {
-                owner: pr.owner,
-                repo: pr.repo,
-                sha: nextSelection.sha,
-              })
-            ).id;
-        workspaces.current.set(nextSelection.sha, workspace);
-      }
+      const workspace = await ensureWorkspace(nextSelection.sha);
       const demoSymbol: Record<string, [string, number]> = {
         backoff: ["internal/harbor/backoff.go", 5],
         Connect: ["internal/harbor/connect.go", 8],
@@ -300,7 +383,7 @@ export function App() {
       setNavResult(result);
       setNavWorkspace(workspace);
       setNavSHA(nextSelection.sha);
-      if (result.locations?.length === 1)
+      if (nextMethod !== "references" && result.locations?.length === 1)
         await showLocation(
           result.locations[0],
           workspace,
@@ -309,10 +392,15 @@ export function App() {
         );
     } catch (error) {
       captureError(error, "navigate");
-      if (epoch.current === requestEpoch)
+      if (epoch.current === requestEpoch) {
+        workspaces.current.delete(nextSelection.sha);
+        capabilityRequests.current.delete(
+          `${nextSelection.sha}:${nextSelection.path}`,
+        );
         setError(
           error instanceof Error ? error.message : "Navigation is unavailable.",
         );
+      }
     } finally {
       if (epoch.current === requestEpoch) setNavigating(false);
     }
@@ -665,8 +753,19 @@ export function App() {
                 onMethod={setMethod}
                 onSelect={selectSymbol}
                 onNavigate={navigate}
+                onCapabilities={navigationCapabilities}
                 onSource={openSource}
-                onCloseSource={() => setSource(undefined)}
+                onLoadContent={loadContent}
+                navigation={navResult}
+                onLocation={(location) => {
+                  void showLocation(location);
+                }}
+                onDismissNavigation={() => setNavResult(undefined)}
+                onCloseSource={() => {
+                  epoch.current++;
+                  setNavigating(false);
+                  setSource(undefined);
+                }}
                 onComment={(next) => {
                   setTab("review");
                   setMobileTab("review");
@@ -682,49 +781,6 @@ export function App() {
                 <h2>No changed files</h2>
                 <p>This pull request has no files to review.</p>
               </div>
-            )}
-            {navResult && (
-              <section className="navigation-results" aria-live="polite">
-                <div className="section-title">
-                  <span className="eyebrow">
-                    {method === "hover"
-                      ? "TYPE INFORMATION"
-                      : `${navResult.locations?.length || 0} ${method === "references" ? "REFERENCES" : "RESULTS"}`}
-                  </span>
-                  <button
-                    className="text-button"
-                    onClick={() => setNavResult(undefined)}
-                  >
-                    Dismiss
-                  </button>
-                </div>
-                {navResult.hover && <pre>{navResult.hover}</pre>}
-                {!navResult.hover && !navResult.locations?.length && (
-                  <p>
-                    {navResult.message ||
-                      "No results from the language server. The symbol may be external, unresolved, or unsupported."}
-                  </p>
-                )}
-                {navResult.locations?.map((location, i) => (
-                  <button
-                    className="location-result"
-                    disabled={navigating}
-                    key={`${location.path}:${location.line}:${i}`}
-                    onClick={() => {
-                      void showLocation(location).catch((error) =>
-                        setError(
-                          error instanceof Error
-                            ? error.message
-                            : "Could not load navigation target.",
-                        ),
-                      );
-                    }}
-                  >
-                    <code>{location.path}</code>
-                    <span>Line {location.line + 1}</span>
-                  </button>
-                ))}
-              </section>
             )}
           </div>
           <aside

@@ -22,6 +22,7 @@ export function startTelemetry() {
         "/api/workspace",
         "/api/workspace/file",
         "/api/navigate",
+        "/api/navigation/capabilities",
         "/api/review",
         "/api/comments",
         "/api/reply",

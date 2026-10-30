@@ -6,7 +6,6 @@ import {
   indexCommentLines,
   rangeFields,
 } from "./comment-range";
-import { navigationMethods } from "./ContextActions";
 
 const patch = [
   "@@ -10,4 +20,5 @@",
@@ -105,24 +104,4 @@ describe("multiline comment ranges", () => {
     expect(rows[0]).toEqual({});
     expect(rows[3]).toEqual({});
   });
-});
-
-it("exposes only language-relevant contextual navigation actions", () => {
-  expect(navigationMethods("main.go")).toEqual([
-    "definition",
-    "implementation",
-    "references",
-    "hover",
-  ]);
-  expect(navigationMethods("infra/main.tf")).toEqual([
-    "definition",
-    "references",
-    "hover",
-  ]);
-  expect(navigationMethods("infra/main.tofu")).not.toContain("implementation");
-  expect(navigationMethods("infra/main.tf.json")).toEqual(["definition", "references", "hover"]);
-  expect(navigationMethods("infra/main.tofu.json")).toEqual([]);
-  expect(navigationMethods("infra/values.tofuvars")).toEqual([]);
-  expect(navigationMethods("README.md")).toEqual([]);
-  expect(navigationMethods("worker.py")).toEqual([]);
 });

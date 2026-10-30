@@ -44,6 +44,10 @@ func (f *fakeGitHub) Archive(context.Context, string, string, string) (io.ReadCl
 
 type fakeNavigation struct{}
 
+func (fakeNavigation) Capabilities(context.Context, string, string) (navigation.Capabilities, error) {
+	return navigation.Capabilities{Server: "custom", LanguageID: "python", Methods: []string{"definition", "hover"}}, nil
+}
+
 func (fakeNavigation) Prepare(context.Context, string, string, string, io.Reader) (string, error) {
 	return "id", nil
 }
@@ -156,5 +160,26 @@ func TestReviewRangePayloadPreserved(t *testing.T) {
 	w = request(h, "/api/review", strings.Replace(body, "start_line", "startLine", 1), "127.0.0.1:4727", "http://127.0.0.1:4727", "application/json")
 	if w.Code != http.StatusBadRequest || github.reviews != 1 {
 		t.Fatal("unknown range field was silently accepted")
+	}
+}
+
+func TestNavigationCapabilitiesEndpoint(t *testing.T) {
+	h, _ := testServer()
+	const endpoint = "/api/navigation/capabilities"
+	w := request(h, endpoint, `{"id":"workspace","path":"app.py"}`, "127.0.0.1:4727", "http://127.0.0.1:4727", "application/json")
+	var capabilities navigation.Capabilities
+	if w.Code != http.StatusOK || json.Unmarshal(w.Body.Bytes(), &capabilities) != nil {
+		t.Fatalf("capabilities failed: %d %s", w.Code, w.Body)
+	}
+	if capabilities.Server != "custom" || capabilities.LanguageID != "python" || strings.Join(capabilities.Methods, ",") != "definition,hover" {
+		t.Fatalf("server capabilities changed: %+v", capabilities)
+	}
+	w = request(h, endpoint, `{"id":"workspace","path":"app.py","command":"untrusted"}`, "127.0.0.1:4727", "http://127.0.0.1:4727", "application/json")
+	if w.Code != http.StatusBadRequest {
+		t.Fatal("capabilities accepted process configuration from the browser")
+	}
+	w = request(h, endpoint, `{}`, "127.0.0.1:4727", "http://evil.example", "application/json")
+	if w.Code != http.StatusForbidden {
+		t.Fatal("capabilities accepted an untrusted origin")
 	}
 }
