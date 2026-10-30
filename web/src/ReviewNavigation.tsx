@@ -16,7 +16,7 @@ export function ReviewNavigation({
   if (!result && !busy) return null;
   const locations = result?.locations || [];
   return (
-    <div className="review-navigation" aria-label="Code navigation results">
+    <section className="review-navigation" aria-label="Code navigation results">
       <div className="review-navigation-controls">
         <span role="status">
           {busy
@@ -57,6 +57,6 @@ export function ReviewNavigation({
           {result.message || "The language server returned no destinations."}
         </p>
       )}
-    </div>
+    </section>
   );
 }
