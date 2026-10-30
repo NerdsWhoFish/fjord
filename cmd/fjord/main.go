@@ -10,6 +10,7 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
+	"regexp"
 	"syscall"
 	"time"
 
@@ -30,16 +31,13 @@ func main() {
 	}
 }
 func run() error {
-	addr := flag.String("addr", "127.0.0.1:4727", "loopback listen address")
+	addr := flag.String("addr", "127.0.0.1:4727", "listen address")
+	browserHost := flag.String("host", "", "browser hostname or IP (required for wildcard listeners; no scheme or port)")
 	showVersion := flag.Bool("version", false, "print version")
 	flag.Parse()
 	if *showVersion {
 		fmt.Println(version)
 		return nil
-	}
-	host, _, err := net.SplitHostPort(*addr)
-	if err != nil || (host != "127.0.0.1" && host != "::1") {
-		return errors.New("listen address must use 127.0.0.1 or [::1]; remote hosting is not supported")
 	}
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
@@ -64,15 +62,19 @@ func run() error {
 	}
 	ln, err := net.Listen("tcp", *addr)
 	if err != nil {
-		return errors.New("cannot bind loopback address; choose an available port")
+		return errors.New("cannot bind listen address; choose an available address and port")
 	}
 	defer ln.Close()
+	host, err := requestHost(ln.Addr().String(), *browserHost)
+	if err != nil {
+		return err
+	}
 	nav := navigation.New()
 	defer nav.Close()
-	srv := &http.Server{Handler: server.New(server.Config{Host: ln.Addr().String(), Assets: fjord.Assets(), GitHub: github.New(nil), Navigation: nav, AI: ai, FaroURL: faro, Version: version}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 150 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 * 1024}
+	srv := &http.Server{Handler: server.New(server.Config{Host: host, Assets: fjord.Assets(), GitHub: github.New(nil), Navigation: nav, AI: ai, FaroURL: faro, Version: version}), ReadHeaderTimeout: 5 * time.Second, ReadTimeout: 15 * time.Second, WriteTimeout: 150 * time.Second, IdleTimeout: 60 * time.Second, MaxHeaderBytes: 16 * 1024}
 	done := make(chan error, 1)
 	go func() { done <- srv.Serve(ln) }()
-	fmt.Printf("Fjord %s\nOpen http://%s\n", version, ln.Addr())
+	fmt.Printf("Fjord %s\nOpen http://%s\n", version, host)
 	select {
 	case err := <-done:
 		if !errors.Is(err, http.ErrServerClosed) {
@@ -83,4 +85,27 @@ func run() error {
 	finish, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 	defer cancel()
 	return srv.Shutdown(finish)
+}
+
+func requestHost(listenAddr, browserHost string) (string, error) {
+	host, port, err := net.SplitHostPort(listenAddr)
+	if err != nil {
+		return "", err
+	}
+	if browserHost != "" {
+		host = browserHost
+	}
+	ip := net.ParseIP(host)
+	if host == "" || (ip != nil && ip.IsUnspecified()) {
+		return "", errors.New("wildcard listeners require -host with the hostname or IP used in your browser")
+	}
+	if ip == nil && !regexp.MustCompile(`^[a-zA-Z0-9](?:[a-zA-Z0-9.-]*[a-zA-Z0-9])?$`).MatchString(host) {
+		return "", errors.New("-host must be a hostname or IP without scheme, port, or path")
+	}
+	authority := net.JoinHostPort(host, port)
+	if port == "80" {
+		// Browsers omit the default HTTP port from Host and Origin.
+		authority = authority[:len(authority)-3]
+	}
+	return authority, nil
 }

@@ -24,6 +24,15 @@ Open the loopback URL printed by the CLI, normally `http://127.0.0.1:4727`, and 
 The demo explores the UI without accessing GitHub and cannot submit reviews.
 `-addr 127.0.0.1:4728` selects another local port.
 
+To browse from another device on a trusted LAN, bind all interfaces and specify the server IP or hostname used in your browser:
+
+```sh
+./bin/fjord -addr 0.0.0.0:4727 -host 192.168.1.10
+```
+
+Replace the example IP with your server's LAN address, then open the printed URL.
+There is no Fjord login; connected users act through the server's GitHub CLI identity.
+
 `make check` runs frontend tests/build, Go vet, race tests, real sandboxed `gopls` integration tests, and formatting checks.
 `make install` checks and installs the embedded native application to `~/bin/fjord`.
 Make targets disable inherited Go workspaces.
@@ -71,9 +80,9 @@ Compatibility and model availability depend on the configured provider.
 
 ## Security and telemetry
 
-Fjord binds only to loopback.
-Exact Host and Origin checks, JSON-only API requests, and a restrictive Content Security Policy protect the authenticated local service.
-Do not expose it through a reverse proxy; it is not a multi-user security boundary.
+Fjord binds to loopback by default and supports explicitly configured trusted LAN access.
+Exact Host and Origin checks, JSON-only API requests, and a restrictive Content Security Policy block requests from unrelated websites.
+LAN mode has no authentication and is not a multi-user security boundary; use it only on a trusted network.
 GitHub credentials stay in the backend.
 Browser draft storage contains review text, so use a trusted browser profile.
 

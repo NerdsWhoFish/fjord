@@ -101,6 +101,24 @@ func TestPRLoadAndMalformedInputs(t *testing.T) {
 		t.Fatal("invalid input reached GitHub")
 	}
 }
+func TestLANHostOriginBoundary(t *testing.T) {
+	ai, _ := assist.New("", "", "")
+	h := New(Config{Host: "192.168.1.10:4727", AI: ai})
+	for _, tt := range []struct {
+		host, origin string
+		want         int
+	}{
+		{"192.168.1.10:4727", "http://192.168.1.10:4727", 200},
+		{"evil.example:4727", "http://evil.example:4727", 403},
+		{"192.168.1.10:4727", "http://evil.example:4727", 403},
+		{"192.168.1.10:4727", "", 403},
+	} {
+		w := request(h, "/api/config", `{}`, tt.host, tt.origin, "application/json")
+		if w.Code != tt.want {
+			t.Errorf("host %q origin %q: got %d want %d", tt.host, tt.origin, w.Code, tt.want)
+		}
+	}
+}
 func TestReviewPayloadPreserved(t *testing.T) {
 	h, g := testServer()
 	body := `{"owner":"o","repo":"r","number":1,"headSHA":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","baseSHA":"bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb","event":"REQUEST_CHANGES","body":"Please handle errors.","comments":[{"path":"a.go","line":12,"side":"LEFT","body":"Deleted error handling"}]}`
