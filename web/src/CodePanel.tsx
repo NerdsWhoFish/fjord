@@ -202,6 +202,18 @@ export function CodePanel({
                 });
                 return (
                   <div className={`code-row ${line.kind}`} key={index}>
+                    <span className="comment-gutter">
+                      {position && (
+                        <button
+                          className="add-comment"
+                          title={`Comment on ${position.side === "LEFT" ? "base" : "head"} line ${position.line}`}
+                          aria-label={`Comment on ${position.side === "LEFT" ? "base" : "head"} line ${position.line}`}
+                          onClick={() => onComment(selectionFor("", 0))}
+                        >
+                          +
+                        </button>
+                      )}
+                    </span>
                     <span
                       className="line-number"
                       title={
@@ -243,16 +255,6 @@ export function CodePanel({
                         line.text
                       )}
                     </code>
-                    {position && (
-                      <button
-                        className="add-comment"
-                        title={`Comment on ${position.side === "LEFT" ? "base" : "head"} line ${position.line}`}
-                        aria-label={`Comment on ${position.side === "LEFT" ? "base" : "head"} line ${position.line}`}
-                        onClick={() => onComment(selectionFor("", 0))}
-                      >
-                        +
-                      </button>
-                    )}
                   </div>
                 );
               })}
@@ -269,7 +271,8 @@ export function CodePanel({
         </div>
         <div className="code-footnote">
           <span className="live-dot" />
-          Select a symbol to follow the code. Use + to leave a line comment.
+          Use + beside a line number to draft a comment. Submit drafts together
+          from Review.
         </div>
       </div>
       {source && (

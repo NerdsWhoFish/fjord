@@ -50,6 +50,11 @@ GitHub can receive a push after the freshness check.
 Branch protection remains responsible for dismissing stale approvals.
 GitHub remains the source of truth.
 
+Use the **+** in the diff's line-number gutter to comment on an added, deleted, or context line.
+Choose **Add to review**, then submit the accumulated drafts from the **Review** panel.
+The **Dark mode** toggle is available on both the start page and review workspace.
+Fjord starts with your system theme and remembers an explicit choice in this browser.
+
 ## Navigation limits
 
 The first version supports a Go module at the repository root with standard-library, local, or vendored dependencies.

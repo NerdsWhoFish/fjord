@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 import { api } from "./api";
 import { Assistant } from "./Assistant";
 import { CodePanel } from "./CodePanel";
+import { ThemeToggle } from "./ThemeToggle";
 import { demoBaseSource, demoPR, demoSource, demoThreads } from "./demo";
 import { emptyDraft, readDraft, ReviewPanel, writeDraft } from "./ReviewPanel";
 import type { ReviewDraft } from "./ReviewPanel";
@@ -406,7 +407,7 @@ export function App() {
       <div className="welcome">
         <header>
           <Brand />
-          <span className="quiet-label">A clearer view of your code.</span>
+          <ThemeToggle />
         </header>
         <main className="welcome-main">
           <div className="welcome-copy">
@@ -579,6 +580,7 @@ export function App() {
             </p>
           </div>
           <div className="header-actions">
+            <ThemeToggle />
             {pr.url && (
               <a
                 className="button"
