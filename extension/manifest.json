@@ -1,0 +1,22 @@
+{
+  "manifest_version": 3,
+  "name": "Fjord PR Review",
+  "description": "Open GitHub pull request changes in Fjord.",
+  "version": "0.1.0",
+  "minimum_chrome_version": "106",
+  "permissions": ["declarativeNetRequestWithHostAccess", "webNavigation"],
+  "host_permissions": ["https://github.com/*"],
+  "background": {
+    "service_worker": "service-worker.mjs",
+    "type": "module"
+  },
+  "declarative_net_request": {
+    "rule_resources": [
+      {
+        "id": "fjord_pull_requests",
+        "enabled": true,
+        "path": "rules.json"
+      }
+    ]
+  }
+}

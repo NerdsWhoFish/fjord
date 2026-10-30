@@ -1,6 +1,6 @@
 # Fjord
 
-Review GitHub pull requests with semantic code navigation and optional AI assistance.
+Review GitHub pull requests with semantic code navigation and MCP assistance from your preferred AI client.
 
 Keep the diff, surrounding code, and your review together.
 Follow symbols to their definitions or implementations, inspect references, and submit reviews to GitHub.
@@ -34,6 +34,25 @@ To browse from another device on a trusted LAN, bind all interfaces and specify 
 Replace the example IP with your server's LAN address, then open the printed URL.
 There is no Fjord login; connected users act through the server's GitHub CLI identity.
 
+Direct links open a review on page load:
+
+```text
+http://127.0.0.1:4727/spacelift-solutions/demo/229
+http://127.0.0.1:4727/?owner=spacelift-solutions&repo=demo&number=229
+http://127.0.0.1:4727/?pr=https://github.com/spacelift-solutions/demo/pull/229
+```
+
+Successful loads normalize to `/owner/repo/number`. Refresh and browser back/forward preserve the selected PR.
+To serve behind a TLS reverse proxy, explicitly configure the public origin:
+
+```sh
+./bin/fjord -addr 0.0.0.0:4727 -public-url https://fjord.stout.zone
+```
+
+`FJORD_PUBLIC_URL` is the equivalent environment setting. Use either `-public-url` or `-host`.
+The proxy must preserve the configured Host header. Fjord does not infer trust from forwarded headers.
+This configures routing; it does not provision DNS, TLS, or a public deployment.
+
 `make check` requires both language servers and runs frontend tests/build, Go vet, race tests, real sandboxed `gopls` and `tofu-ls` integration tests, and formatting checks.
 `make install` checks and installs the embedded native application to `~/bin/fjord`.
 Make targets disable inherited Go workspaces.
@@ -45,7 +64,7 @@ Make targets disable inherited Go workspaces.
 - Follow symbols using contextual definition, reference, and type-information actions in isolated revision workspaces. Go also supports implementation navigation.
 - Draft single-line or multiline comments and explicitly submit a comment review, approval, or request for changes. Submission checks the head and merge-base SHAs and pins GitHub's `commit_id` to the reviewed head.
 - Read inline review comments and reply to them.
-- Ask an optional AI provider about context you explicitly choose to send.
+- Connect an MCP client to inspect the open review, follow code, and propose attributed comment or suggestion drafts.
 
 GitHub can receive a push after the freshness check.
 Branch protection remains responsible for dismissing stale approvals.
@@ -57,7 +76,9 @@ Targets can be unchanged files anywhere in the extracted revision and open in th
 Use the line-number gutter to select a line or drag a range, then choose the comment action.
 Shift-click extends a selection without dragging.
 Multiline comments stay on one side within one diff hunk; ranges cannot span omitted code.
-Choose **Add to review**, then submit the accumulated drafts from the **Review** panel.
+Choose **Add to review**, then select **Comment**, **Approve**, or **Request changes** below the PR title.
+The review dialog contains the editable summary, decision, draft comments, and existing conversation.
+Closing it preserves drafts; only its final submit button sends the review to GitHub.
 The larger comment editor syntax-highlights the selected code and accepts Markdown.
 Use **Insert suggestion** on head-side lines to insert a GitHub suggestion block prefilled with the selected code, then edit the replacement before adding it to your review.
 The hamburger **Settings** menu contains the **Theme** selector, offering System, Light, Dark, and Dracula.
@@ -73,6 +94,8 @@ The source pane remains available for further symbol navigation from each destin
 The sidebar follows the file at the top of the scrolling diff, and each file header has its own Viewed checkbox.
 Context controls include directional arrows and check the source before offering more lines below the final hunk.
 The PR title links to GitHub and includes the PR number; repository details appear once in the main heading.
+The right sidebar automatically loads the active file's outline and follows opened source files at their exact revision.
+Use **Search symbols** in the heading or Ctrl/Cmd+K to find declarations across the workspace.
 
 Diffs and source panes include syntax highlighting for Go, JavaScript/TypeScript and JSX/TSX, Terraform/HCL, Python, shell, JSON, YAML, HTML/XML, CSS, Markdown, SQL, Rust, Ruby, Java, C/C++, C#, Swift, Dockerfiles, and TOML.
 Highlighting preserves symbol-click positions and runs in a disposable browser worker.
@@ -129,28 +152,30 @@ Repository configuration may influence the language server itself, so its execut
 Fjord does not run repository installation hooks or fetch dependencies for it.
 
 Symbol menus discover navigation and inspection support from the server's actual `initialize` response.
-Unsupported actions stay hidden; server startup failures offer a retry without blocking comments or AI.
+Unsupported actions stay hidden; server startup failures offer a retry without blocking comments.
 The transport currently supports stdio and UTF-16 positions, not remote TCP/WebSocket servers or other position encodings.
 
 ## Language-server review tools
 
-Symbol popups and each file's **Code tools** button expose the features its language server supports:
+The outline sidebar, heading search, inline diagnostics, and symbol tools expose the features the language server supports:
 
 | Feature | Use during review |
 | --- | --- |
-| Diagnostics | Read errors, warnings, and hints, then open the reported location. |
+| Diagnostics | See severity markers and squiggles inline; open messages and available fixes. |
 | Incoming / outgoing calls | Follow callers or callees, including reported call sites. |
 | Supertypes / subtypes | Explore the selected type's hierarchy. |
-| File outline | Browse nested functions, types, and declarations. |
-| Workspace symbols | Search declarations across the selected project root, including unchanged files. |
+| File outline | Browse automatically loaded functions, types, and declarations in the right sidebar. |
+| Workspace symbols | Search from the heading across the selected project root, including unchanged files. |
 | Highlight occurrences | Mark reads and writes of the selected symbol inline. |
 | Inlay hints | Show inferred types or parameter names without changing source offsets. |
 | Code actions | Inspect a proposed fix and explicitly add review suggestion drafts. |
 | Preview rename | Enter a new name and inspect the edits across files. |
 
-Results stay in the initiating popup. Inline annotations are tied to the exact file and revision and can be cleared.
+Explicit symbol-navigation results stay in the initiating popup. Inline annotations are tied to the exact file and revision and can be cleared.
 The Go default profile enables parameter-name, assigned-variable-type, and range-variable-type hints; custom servers may require their own hint settings.
 Diagnostics use pull reports when available or wait briefly for push publications. A server that has not published is reported as pending, not as having no problems.
+Reports load as files mount, with bounded caching and concurrency. File headers show counts, a visibility toggle, and retry states.
+Head diagnostics never decorate deleted base lines; base source views and removed files request their own revision's report.
 
 Code actions and rename never modify the workspace. Server commands and file creation, deletion, or renaming are not executed.
 Edit previews validate every source range and reject overlapping or out-of-revision changes.
@@ -196,26 +221,40 @@ Workspaces are temporary, bounded, and removed at shutdown.
 Dependency provisioning, hosted accounts, check-run views, issue comments, and thread resolution remain future work.
 The GitHub PR link provides actions not yet exposed here.
 
-## AI assistance
+## MCP assistance
 
-AI is disabled until the server is configured.
-Set `FJORD_AI_ENDPOINT` to a full Chat Completions-compatible endpoint URL, `FJORD_AI_MODEL` to your chosen model, and `FJORD_AI_API_KEY` through your secret manager when required.
-Local model servers can use loopback HTTP; remote endpoints require HTTPS.
+Fjord exposes a Streamable HTTP MCP server at `/mcp`. Open a real PR in the browser, then configure your preferred MCP client with the same service's endpoint, for example `http://127.0.0.1:4727/mcp`.
+The Settings menu shows the endpoint and browser-session connection state.
+No model provider, API key, or embedded chat is configured in Fjord.
 
-The provider receives the question and selected code/diff context only when you ask.
-Check its data policy before sending private code.
-AI has no tools, filesystem access, GitHub token, or review-submission privileges.
-Its answers are suggestions for the human reviewer, rendered as text.
-Provider errors do not expose response bodies or credentials.
+An MCP client can discover open review sessions, read draft and published comments, read code at the pinned revision, query the language server, and show source or navigation results in the browser.
+It can propose inline comments and GitHub suggestion drafts. These remain visibly AI-attributed drafts for the reviewer to inspect, edit, or remove.
+Tools do not submit reviews, reply on GitHub, execute language-server commands, or write source files.
 
-The adapter follows the [Chat Completions message contract](https://developers.openai.com/api/reference/resources/chat/subresources/completions/methods/create).
-Compatibility and model availability depend on the configured provider.
+Browser actions are queued with idempotency keys and acknowledged after the tab applies them.
+Tool responses distinguish pending delivery from applied or failed delivery.
+The browser remains the owner of its draft and mirrors it to the service; incoming drafts merge without replacing human edits.
+Sessions are tied to the exact head and merge-base SHAs. A newly pushed revision requires opening a new review session.
+
+Sessions and pending actions are bounded, expire, and live in one server process.
+Restarting the service discards pending delivery; already applied browser drafts remain in sessionStorage.
+Use a single service replica for this workflow. A connected browser tab is required to display results or accept drafts.
+Review content and source returned through MCP are untrusted repository data, not instructions.
+Your chosen AI client controls what it sends to its model provider.
+
+## Chrome extension
+
+The [Chrome extension](extension/README.md) redirects GitHub PR `/changes` pages to `https://fjord.stout.zone/owner/repo/number`.
+It handles both full navigation and GitHub's in-page history transitions, without redirecting ordinary PR conversation pages.
+Load the unpacked extension in a development browser using the instructions in its README.
+The extension does not configure or deploy the Fjord service.
 
 ## Security and telemetry
 
 Fjord binds to loopback by default and supports explicitly configured trusted LAN access.
 Exact Host and Origin checks, JSON-only API requests, and a restrictive Content Security Policy block requests from unrelated websites.
-LAN mode has no authentication and is not a multi-user security boundary; use it only on a trusted network.
+LAN mode, including MCP, has no authentication and is not a multi-user security boundary; use it only on a trusted network.
+Native MCP clients may omit Origin; supplied origins must match the configured public origin and cross-site browser requests are rejected.
 GitHub credentials stay in the backend.
 Browser draft storage contains review text, so use a trusted browser profile.
 
@@ -229,11 +268,11 @@ Optional RUM uses the shared `@nerdswhofish/browser-telemetry` Faro package and 
 Configure `FJORD_FARO_URL` on the server.
 The relay rebuilds allowlisted error, event, and Web Vitals envelopes.
 It discards user/session metadata, arbitrary text, source paths, and browser trace payloads.
-Code, review text, credentials, raw repository identities, and provider bodies are never logged.
+Code, review text, credentials, and raw repository identities are never logged.
 
 ## Development
 
-The Go packages separate GitHub, navigation, AI transport, telemetry, and HTTP boundaries.
+The Go packages separate GitHub, navigation, telemetry, and HTTP boundaries; MCP tools reuse these services.
 `web/` contains React/TypeScript.
 Theme palettes live in `web/src/theme.css`; components consume semantic CSS variables for surfaces, controls, diff states, file-tree states, and syntax tokens.
 To add a named theme, define its palette, extend the theme choices in `web/src/theme.ts` and `web/src/ThemeToggle.tsx`, and include its contrast cases in `web/src/theme.test.ts`.

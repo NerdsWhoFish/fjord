@@ -1,0 +1,18 @@
+[
+  {
+    "id": 1,
+    "priority": 1,
+    "action": {
+      "type": "redirect",
+      "redirect": {
+        "regexSubstitution": "https://fjord.stout.zone/\\1/\\2/\\3"
+      }
+    },
+    "condition": {
+      "regexFilter": "^https://github\\.com/([A-Za-z0-9](?:[A-Za-z0-9-]*[A-Za-z0-9])?)/([A-Za-z0-9_.-]+)/pull/([1-9][0-9]{0,14})/changes/?(?:[?#].*)?$",
+      "isUrlFilterCaseSensitive": true,
+      "resourceTypes": ["main_frame"],
+      "requestMethods": ["get"]
+    }
+  }
+]
