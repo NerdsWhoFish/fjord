@@ -1,0 +1,8 @@
+/bin/
+/web/node_modules/
+/web/dist/
+*.log
+.env
+.env.*
+!.env.example
+/artifacts/

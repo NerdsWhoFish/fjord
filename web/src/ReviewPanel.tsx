@@ -1,0 +1,376 @@
+import { useEffect, useRef, useState } from "react";
+import type {
+  DraftComment,
+  PullRequest,
+  ReviewEvent,
+  Selection,
+  ThreadComment,
+} from "./types";
+
+export interface ReviewDraft {
+  comments: DraftComment[];
+  body: string;
+  event: ReviewEvent;
+}
+export const emptyDraft = (): ReviewDraft => ({
+  comments: [],
+  body: "",
+  event: "COMMENT",
+});
+
+export function draftKey(pr: PullRequest, demo: boolean) {
+  return `fjord:${demo ? "demo:" : ""}${pr.owner}/${pr.repo}/${pr.number}/${pr.baseSHA}/${pr.headSHA}`;
+}
+
+export function readDraft(pr: PullRequest, demo: boolean): ReviewDraft {
+  try {
+    const saved = JSON.parse(
+      sessionStorage.getItem(draftKey(pr, demo)) || "null",
+    );
+    if (
+      saved &&
+      Array.isArray(saved.comments) &&
+      typeof saved.body === "string" &&
+      ["COMMENT", "APPROVE", "REQUEST_CHANGES"].includes(saved.event)
+    )
+      return saved;
+  } catch {
+    /* A browser can disable storage; reviews still work in memory. */
+  }
+  return emptyDraft();
+}
+
+export function writeDraft(
+  pr: PullRequest,
+  demo: boolean,
+  draft: ReviewDraft,
+): boolean {
+  try {
+    sessionStorage.setItem(draftKey(pr, demo), JSON.stringify(draft));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+interface Props {
+  pr: PullRequest;
+  demo: boolean;
+  draft: ReviewDraft;
+  onDraft: (draft: ReviewDraft) => void;
+  threads: ThreadComment[];
+  threadsError?: string;
+  onReloadThreads: () => void;
+  onSubmit: () => Promise<void>;
+  onReply: (id: number, body: string) => Promise<void>;
+  pendingComment?: Selection;
+  onCloseComment: () => void;
+}
+
+export function ReviewPanel({
+  pr,
+  demo,
+  draft,
+  onDraft,
+  threads,
+  threadsError,
+  onReloadThreads,
+  onSubmit,
+  onReply,
+  pendingComment,
+  onCloseComment,
+}: Props) {
+  const [comment, setComment] = useState("");
+  const [reply, setReply] = useState<Record<number, string>>({});
+  const [sending, setSending] = useState(false);
+  const [replying, setReplying] = useState<number>();
+  const [error, setError] = useState("");
+  const commentDialog = useRef<HTMLDialogElement>(null);
+  const submitDialog = useRef<HTMLDialogElement>(null);
+  useEffect(() => {
+    setComment("");
+    if (pendingComment) commentDialog.current?.showModal();
+    else commentDialog.current?.close();
+  }, [pendingComment]);
+  async function send() {
+    setSending(true);
+    setError("");
+    try {
+      await onSubmit();
+      submitDialog.current?.close();
+    } catch (error) {
+      setError(
+        error instanceof Error
+          ? error.message
+          : "Review could not be submitted.",
+      );
+    } finally {
+      setSending(false);
+    }
+  }
+  async function sendReply(id: number) {
+    setReplying(id);
+    setError("");
+    try {
+      await onReply(id, reply[id]);
+      setReply((current) => ({ ...current, [id]: "" }));
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Reply could not be sent.",
+      );
+    } finally {
+      setReplying(undefined);
+    }
+  }
+  return (
+    <div className="review-panel">
+      <div className="section-title">
+        <span className="eyebrow">YOUR REVIEW</span>
+        <span className="count">{draft.comments.length} drafts</span>
+      </div>
+      <p className="muted small">
+        Drafts stay in this browser tab until you submit. They are tied to this
+        exact PR revision.
+      </p>
+      {draft.comments.map((item) => (
+        <article className="draft-card" key={item.id}>
+          <div className="draft-location">
+            <code>
+              {item.path}:{item.line}
+            </code>
+            <span>{item.side === "LEFT" ? "base" : "head"}</span>
+          </div>
+          <p>{item.body}</p>
+          <button
+            className="text-button"
+            onClick={() =>
+              onDraft({
+                ...draft,
+                comments: draft.comments.filter((c) => c.id !== item.id),
+              })
+            }
+          >
+            Remove draft
+          </button>
+        </article>
+      ))}
+      <label htmlFor="review-summary">Review summary</label>
+      <textarea
+        id="review-summary"
+        rows={5}
+        value={draft.body}
+        onChange={(e) => onDraft({ ...draft, body: e.target.value })}
+        placeholder="What should the author know?"
+      />
+      <label htmlFor="review-decision">Review decision</label>
+      <select
+        id="review-decision"
+        value={draft.event}
+        onChange={(e) =>
+          onDraft({ ...draft, event: e.target.value as ReviewEvent })
+        }
+      >
+        <option value="COMMENT">Comment</option>
+        <option value="APPROVE">Approve</option>
+        <option value="REQUEST_CHANGES">Request changes</option>
+      </select>
+      <button
+        className="primary wide"
+        disabled={
+          demo ||
+          pr.state !== "open" ||
+          (draft.event === "COMMENT" &&
+            !draft.body.trim() &&
+            !draft.comments.length) ||
+          (draft.event === "REQUEST_CHANGES" && !draft.body.trim())
+        }
+        onClick={() => {
+          setError("");
+          submitDialog.current?.showModal();
+        }}
+      >
+        Review and submit
+      </button>
+      {demo && (
+        <p className="small demo-note">
+          Demo review only. Nothing can be sent to GitHub.
+        </p>
+      )}
+      {!demo && pr.state !== "open" && (
+        <p className="notice">
+          This pull request is closed. You can read its changes and
+          conversation, but cannot submit a review.
+        </p>
+      )}
+      {error && (
+        <p className="error" role="alert">
+          {error}
+        </p>
+      )}
+      <div className="section-title thread-title">
+        <span className="eyebrow">CONVERSATION</span>
+        <button className="text-button" onClick={onReloadThreads}>
+          Refresh
+        </button>
+      </div>
+      {threadsError ? (
+        <p className="error" role="alert">
+          {threadsError}
+        </p>
+      ) : (
+        !threads.length && (
+          <p className="muted small">No inline review comments yet.</p>
+        )
+      )}
+      {threads.map((thread) => (
+        <article className="thread" key={thread.id}>
+          <div className="thread-author">
+            <span className="avatar">
+              {thread.author.slice(0, 1).toUpperCase()}
+            </span>
+            <strong>{thread.author}</strong>
+            {thread.url && (
+              <a href={thread.url} target="_blank" rel="noreferrer">
+                GitHub
+              </a>
+            )}
+          </div>
+          <code className="thread-path">
+            {thread.path}
+            {thread.line ? `:${thread.line}` : " (outdated)"}
+          </code>
+          <p>{thread.body}</p>
+          <label className="sr-only" htmlFor={`reply-${thread.id}`}>
+            Reply to {thread.author}
+          </label>
+          <textarea
+            id={`reply-${thread.id}`}
+            rows={2}
+            placeholder="Write a reply..."
+            value={reply[thread.id] || ""}
+            onChange={(e) =>
+              setReply((current) => ({
+                ...current,
+                [thread.id]: e.target.value,
+              }))
+            }
+          />
+          <button
+            disabled={
+              demo || replying !== undefined || !reply[thread.id]?.trim()
+            }
+            onClick={() => sendReply(thread.id)}
+          >
+            {replying === thread.id ? "Sending..." : "Send reply"}
+          </button>
+        </article>
+      ))}
+      <dialog
+        ref={commentDialog}
+        onCancel={onCloseComment}
+        onClose={onCloseComment}
+        aria-labelledby="comment-title"
+      >
+        <form
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (!pendingComment || !comment.trim()) return;
+            onDraft({
+              ...draft,
+              comments: [
+                ...draft.comments,
+                {
+                  id: crypto.randomUUID(),
+                  path:
+                    pendingComment.side === "LEFT"
+                      ? pr.files.find(
+                          (f) => f.previousPath === pendingComment.path,
+                        )?.path || pendingComment.path
+                      : pendingComment.path,
+                  line: pendingComment.line,
+                  side: pendingComment.side,
+                  body: comment.trim(),
+                },
+              ],
+            });
+            onCloseComment();
+          }}
+        >
+          <div className="dialog-heading">
+            <h2 id="comment-title">Leave a line comment</h2>
+            <button
+              type="button"
+              className="icon-button"
+              onClick={onCloseComment}
+              aria-label="Close comment"
+            >
+              x
+            </button>
+          </div>
+          <p className="muted small">
+            {pendingComment?.path}:{pendingComment?.line} /{" "}
+            {pendingComment?.side === "LEFT" ? "base" : "head"}
+          </p>
+          <pre className="selected-code">{pendingComment?.code}</pre>
+          <label htmlFor="line-comment">Comment</label>
+          <textarea
+            id="line-comment"
+            autoFocus
+            rows={5}
+            value={comment}
+            onChange={(e) => setComment(e.target.value)}
+          />
+          <div className="dialog-actions">
+            <button type="button" onClick={onCloseComment}>
+              Cancel
+            </button>
+            <button className="primary" disabled={!comment.trim()}>
+              Add to review
+            </button>
+          </div>
+        </form>
+      </dialog>
+      <dialog
+        ref={submitDialog}
+        onCancel={(e) => {
+          if (sending) e.preventDefault();
+        }}
+        aria-labelledby="submit-title"
+      >
+        <h2 id="submit-title">Submit your review to GitHub?</h2>
+        <p>
+          <strong>
+            {draft.event === "APPROVE"
+              ? "Approve"
+              : draft.event === "REQUEST_CHANGES"
+                ? "Request changes on"
+                : "Comment on"}
+          </strong>{" "}
+          {pr.owner}/{pr.repo}#{pr.number}.
+        </p>
+        <p className="muted small">
+          Revision {pr.headSHA.slice(0, 7)} with {draft.comments.length} inline{" "}
+          {draft.comments.length === 1 ? "comment" : "comments"}. Fjord checks
+          that the PR has not changed before submitting.
+        </p>
+        {draft.body && <blockquote>{draft.body}</blockquote>}
+        {error && (
+          <p className="error" role="alert">
+            {error}
+          </p>
+        )}
+        <div className="dialog-actions">
+          <button
+            disabled={sending}
+            onClick={() => submitDialog.current?.close()}
+          >
+            Keep editing
+          </button>
+          <button className="primary" disabled={sending || demo} onClick={send}>
+            {sending ? "Submitting..." : "Submit to GitHub"}
+          </button>
+        </div>
+      </dialog>
+    </div>
+  );
+}
