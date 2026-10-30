@@ -64,8 +64,11 @@ Search matches current and previous paths, and the filter menu supports change s
 The diff area scrolls through all changed files; selecting a tree entry jumps to that file.
 Use the context controls to reveal omitted lines above, below, or between hunks in increments of 20.
 Expanded context supports semantic navigation, while review comments remain limited to GitHub's original diff lines.
-Reference results populate the destination selector above the code so you can choose where to jump without scrolling to the end of a file.
+Navigation results replace the actions in the symbol popup; choose a destination there or return to its actions with Back.
 The source pane remains available for further symbol navigation from each destination.
+The sidebar follows the file at the top of the scrolling diff, and each file header has its own Viewed checkbox.
+Context controls include directional arrows and check the source before offering more lines below the final hunk.
+The PR title links to GitHub and includes the PR number; repository details appear once in the main heading.
 
 Diffs and source panes include syntax highlighting for Go, JavaScript/TypeScript and JSX/TSX, Terraform/HCL, Python, shell, JSON, YAML, HTML/XML, CSS, Markdown, SQL, Rust, Ruby, Java, C/C++, C#, Swift, Dockerfiles, and TOML.
 Highlighting preserves symbol-click positions and runs in a disposable browser worker.

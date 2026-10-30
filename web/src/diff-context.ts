@@ -29,9 +29,7 @@ interface Gap {
 const chunkSize = 20;
 
 function readHunk(line: DiffLine, index: number): Hunk | undefined {
-  const match = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(
-    line.text,
-  );
+  const match = /^@@ -(\d+)(?:,(\d+))? \+(\d+)(?:,(\d+))? @@/.exec(line.text);
   if (!match) return undefined;
   const oldStart = Number(match[1]);
   const oldCount = match[2] === undefined ? 1 : Number(match[2]);
@@ -69,6 +67,7 @@ function contextRows(
 ): DiffContextRow[] {
   if (gap.count === 0) return [];
   if (base === undefined || head === undefined) {
+    if (gap.count === undefined) return [];
     return [{ kind: "gap", key: gap.key, label: gapLabel(gap, gap.count) }];
   }
   const limit = Math.max(
@@ -84,9 +83,7 @@ function contextRows(
   for (; available < limit; available++) {
     const offset =
       gap.direction === "above" ? limit - available - 1 : available;
-    if (
-      base[gap.oldStart - 1 + offset] !== head[gap.newStart - 1 + offset]
-    )
+    if (base[gap.oldStart - 1 + offset] !== head[gap.newStart - 1 + offset])
       break;
   }
   const count = Number.isFinite(requested)
@@ -133,9 +130,11 @@ export function buildDiffContext(
   content: DiffContextContent = {},
   expanded: Record<string, number> = {},
 ): DiffContextRow[] {
-  const originals = lines.map(
-    (line, index): DiffContextRow => ({ kind: "original", index, line }),
-  );
+  const originals = lines.map((line, index): DiffContextRow => ({
+    kind: "original",
+    index,
+    line,
+  }));
   const hunks: Hunk[] = [];
   for (let index = 0; index < lines.length; index++) {
     if (lines[index].kind !== "hunk") continue;
@@ -153,17 +152,14 @@ export function buildDiffContext(
   if (!hunks.length) return originals;
   let base = sourceLines(content.base);
   let head = sourceLines(content.head);
-  // Added/deleted files have no matching context on the absent side. Once
-  // the available revision loads, stop offering an unknowable EOF control.
+  // A zero-length absent side cannot have unchanged context to reveal.
   if (
     base === undefined &&
-    head !== undefined &&
     hunks.every((hunk) => hunk.oldBefore === 1 && hunk.oldAfter === 1)
   )
     base = [];
   if (
     head === undefined &&
-    base !== undefined &&
     hunks.every((hunk) => hunk.newBefore === 1 && hunk.newAfter === 1)
   )
     head = [];
@@ -212,7 +208,8 @@ export function buildDiffContext(
   const result: DiffContextRow[] = [];
   for (const row of originals) {
     if (row.kind !== "original") continue;
-    for (const inserted of insertions.get(row.index) ?? []) result.push(inserted);
+    for (const inserted of insertions.get(row.index) ?? [])
+      result.push(inserted);
     result.push(row);
   }
   for (const row of contextRows(after, base, head, expanded[after.key] ?? 0))

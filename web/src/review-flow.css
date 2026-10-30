@@ -24,6 +24,16 @@
 .stream-file .panel-heading {
   min-height: 62px;
 }
+.file-review-controls {
+  display: flex;
+  flex-shrink: 0;
+  align-items: center;
+  gap: 12px;
+}
+.file-review-controls .viewed-control {
+  margin: 0;
+  white-space: nowrap;
+}
 .stream-file .code-footnote {
   font-size: 10px;
 }
@@ -48,37 +58,6 @@
   color: var(--ink);
   overflow-wrap: anywhere;
 }
-.review-navigation {
-  position: sticky;
-  top: 0;
-  z-index: 4;
-  margin-bottom: 12px;
-  padding: 10px 12px;
-  background: var(--white);
-  border: 1px solid var(--border-strong);
-  border-radius: 7px;
-  box-shadow: 0 4px 18px var(--shadow);
-  font-size: 12px;
-}
-.review-navigation-controls {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 9px;
-}
-.review-navigation select {
-  flex: 1;
-  min-width: 150px;
-  max-width: 100%;
-  padding: 7px;
-}
-.review-navigation pre {
-  max-height: 160px;
-  overflow: auto;
-  white-space: pre-wrap;
-  overflow-wrap: anywhere;
-  font-size: 11px;
-}
 .diff-context-gap {
   padding: 7px 12px;
   background: var(--surface-muted);
@@ -87,6 +66,11 @@
 .diff-context-gap button {
   padding: 5px 9px;
   font-size: 11px;
+}
+.context-direction {
+  vertical-align: middle;
+  margin-right: 6px;
+  flex-shrink: 0;
 }
 .diff-context-note {
   padding: 8px 12px;
@@ -107,5 +91,13 @@
   }
   .continuous-layout.has-source .continuous-diffs {
     max-height: 50svh;
+  }
+}
+@media (max-width: 600px) {
+  .stream-file .panel-heading {
+    flex-wrap: wrap;
+  }
+  .file-review-controls {
+    margin-left: auto;
   }
 }

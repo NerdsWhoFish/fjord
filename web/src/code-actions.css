@@ -66,6 +66,53 @@
   font-size: 11px;
   color: var(--muted);
 }
+.context-navigation {
+  border-top: 1px solid var(--line);
+  padding-top: 8px;
+  margin-bottom: 8px;
+}
+.context-result-title {
+  margin: 0 4px 8px;
+  font-size: 12px;
+  font-weight: 600;
+}
+.context-destinations {
+  max-height: min(300px, 40dvh);
+  overflow: auto;
+  overscroll-behavior: contain;
+}
+.context-destinations button {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 10px;
+  border: 0;
+  background: transparent;
+  text-align: left;
+  font:
+    500 11px/1.6 "IBM Plex Mono",
+    monospace;
+}
+.context-destinations button span:first-child {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+.context-destinations button:hover,
+.context-destinations button:focus-visible {
+  background: var(--button-hover);
+}
+.context-hover-result {
+  max-height: min(300px, 40dvh);
+  overflow: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  margin: 8px 4px;
+  font:
+    400 11px/1.6 "IBM Plex Mono",
+    monospace;
+}
 .line-select {
   display: inline-block;
   flex-shrink: 0;
@@ -103,7 +150,8 @@
   .line-select {
     min-height: 27px;
   }
-  .code-context-actions > button {
+  .code-context-actions > button,
+  .context-destinations button {
     min-height: 42px;
   }
 }

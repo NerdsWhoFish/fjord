@@ -44,11 +44,11 @@ export function App() {
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [selectedFile, setSelectedFile] = useState("");
+  const [scrollTarget, setScrollTarget] = useState({ path: "" });
   const [selection, setSelection] = useState<Selection>();
   const [source, setSource] = useState<SourceView>();
   const [method, setMethod] = useState<Method>("definition");
   const [navigating, setNavigating] = useState(false);
-  const [navResult, setNavResult] = useState<NavigationResult>();
   const [navWorkspace, setNavWorkspace] = useState("");
   const [navSHA, setNavSHA] = useState("");
   const [draft, setDraft] = useState<ReviewDraft>(emptyDraft);
@@ -155,9 +155,9 @@ export function App() {
   function chooseFile(path: string) {
     epoch.current++;
     setSelectedFile(path);
+    setScrollTarget({ path });
     setSource(undefined);
     setSelection(undefined);
-    setNavResult(undefined);
     setNavigating(false);
     setMobileTab("code");
   }
@@ -165,7 +165,6 @@ export function App() {
     epoch.current++;
     setNavigating(false);
     setSelection(next);
-    setNavResult(undefined);
   }
   function acceptPR(next: PullRequest, isDemo: boolean) {
     epoch.current++;
@@ -174,9 +173,9 @@ export function App() {
     setPR(next);
     setDemo(isDemo);
     setSelectedFile(next.files[0]?.path || "");
+    setScrollTarget({ path: next.files[0]?.path || "" });
     setSource(undefined);
     setSelection(undefined);
-    setNavResult(undefined);
     setDraft(readDraft(next, isDemo));
     setViewed(new Set());
     setThreads([]);
@@ -343,7 +342,6 @@ export function App() {
     const requestEpoch = ++epoch.current;
     setNavigating(true);
     setError("");
-    setNavResult(undefined);
     try {
       const workspace = await ensureWorkspace(nextSelection.sha);
       const demoSymbol: Record<string, [string, number]> = {
@@ -380,16 +378,9 @@ export function App() {
             character: nextSelection.character,
           });
       if (epoch.current !== requestEpoch) return;
-      setNavResult(result);
       setNavWorkspace(workspace);
       setNavSHA(nextSelection.sha);
-      if (nextMethod !== "references" && result.locations?.length === 1)
-        await showLocation(
-          result.locations[0],
-          workspace,
-          nextSelection.sha,
-          requestEpoch,
-        );
+      return result;
     } catch (error) {
       captureError(error, "navigate");
       if (epoch.current === requestEpoch) {
@@ -586,15 +577,6 @@ export function App() {
       </nav>
       <aside className="file-rail">
         <Brand />
-        <div className="rail-heading">
-          <span className="eyebrow">PULL REQUEST</span>
-          <span className="pr-number">#{pr.number}</span>
-        </div>
-        <strong className="repo-name">
-          {pr.owner}
-          <br />
-          <span>{pr.repo}</span>
-        </strong>
         <div className="rail-rule" />
         <div className="rail-heading">
           <span>Changed files</span>
@@ -632,7 +614,17 @@ export function App() {
                 {demo ? "SAMPLE REVIEW" : pr.state}
               </span>
             </div>
-            <h1>{pr.title}</h1>
+            <h1>
+              {pr.url ? (
+                <a href={pr.url} target="_blank" rel="noreferrer">
+                  {pr.title} ({pr.number})
+                </a>
+              ) : (
+                <>
+                  {pr.title} ({pr.number})
+                </>
+              )}
+            </h1>
             <p className="branch-line">
               <strong>{pr.author}</strong> wants to merge{" "}
               <code>{pr.headRef}</code>
@@ -642,26 +634,6 @@ export function App() {
           </div>
           <div className="header-actions">
             <SettingsMenu />
-            {pr.url && (
-              <a
-                className="button"
-                href={pr.url}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open on GitHub
-              </a>
-            )}
-            <button
-              onClick={() => {
-                epoch.current++;
-                setPR(undefined);
-                setNavigating(false);
-                setURL("");
-              }}
-            >
-              Switch PR
-            </button>
           </div>
         </header>
         {demo && (
@@ -707,24 +679,6 @@ export function App() {
             </select>
           </div>
           <span className="review-caption">THE CHANGE, IN CONTEXT</span>
-          {file && (
-            <label className="viewed-control">
-              <input
-                type="checkbox"
-                checked={viewed.has(file.path)}
-                onChange={(e) =>
-                  setViewed((current) => {
-                    const next = new Set(current);
-                    e.target.checked
-                      ? next.add(file.path)
-                      : next.delete(file.path);
-                    return next;
-                  })
-                }
-              />
-              Viewed
-            </label>
-          )}
           <div className="mobile-tabs">
             <button
               className={mobileTab === "code" ? "active" : ""}
@@ -746,6 +700,16 @@ export function App() {
               <CodePanel
                 pr={pr}
                 file={file}
+                scrollTarget={scrollTarget}
+                onActiveFile={setSelectedFile}
+                viewed={viewed}
+                onViewed={(path, checked) => {
+                  setViewed((current) => {
+                    const next = new Set(current);
+                    checked ? next.add(path) : next.delete(path);
+                    return next;
+                  });
+                }}
                 selection={selection}
                 source={source}
                 busy={navigating}
@@ -756,11 +720,9 @@ export function App() {
                 onCapabilities={navigationCapabilities}
                 onSource={openSource}
                 onLoadContent={loadContent}
-                navigation={navResult}
                 onLocation={(location) => {
                   void showLocation(location);
                 }}
-                onDismissNavigation={() => setNavResult(undefined)}
                 onCloseSource={() => {
                   epoch.current++;
                   setNavigating(false);

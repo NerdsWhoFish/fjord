@@ -483,24 +483,6 @@ select {
 .file-rail .count {
   color: var(--tree-muted);
 }
-.pr-number {
-  font-family: "IBM Plex Mono", monospace;
-  font-size: 12px;
-  color: var(--tree-accent);
-}
-.repo-name {
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 1.65;
-  margin: 0 10px;
-  overflow-wrap: anywhere;
-  color: var(--tree-muted);
-}
-.repo-name span {
-  font-size: 20px;
-  color: var(--tree-text);
-  font-weight: 500;
-}
 .rail-rule {
   height: 1px;
   background: var(--tree-border);
@@ -660,6 +642,14 @@ select {
   color: var(--muted);
   margin: 0;
   flex-wrap: wrap;
+}
+.workspace-header h1 a {
+  color: inherit;
+  text-decoration: none;
+}
+.workspace-header h1 a:hover {
+  text-decoration: underline;
+  text-underline-offset: 4px;
 }
 .branch-line strong {
   font-weight: 500;

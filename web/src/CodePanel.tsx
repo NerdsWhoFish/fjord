@@ -23,8 +23,8 @@ import type {
   SourceView,
 } from "./types";
 import { sourceWindow } from "./window";
-import { ReviewNavigation } from "./ReviewNavigation";
 import { buildDiffContext } from "./diff-context";
+import type { DiffContextContent } from "./diff-context";
 import { ContextActions } from "./ContextActions";
 import type { ActionAnchor } from "./ContextActions";
 import { indexCommentLines, rangeFields } from "./comment-range";
@@ -36,19 +36,24 @@ import "./review-flow.css";
 interface Props {
   pr: PullRequest;
   file: ChangedFile;
+  scrollTarget: { path: string };
+  onActiveFile: (path: string) => void;
+  viewed: Set<string>;
+  onViewed: (path: string, checked: boolean) => void;
   selection?: Selection;
   source?: SourceView;
   busy: boolean;
   method: Method;
   onMethod: (method: Method) => void;
   onSelect: (selection: Selection) => void;
-  onNavigate: (selection?: Selection, method?: Method) => void;
+  onNavigate: (
+    selection?: Selection,
+    method?: Method,
+  ) => Promise<NavigationResult | undefined>;
   onCapabilities: (selection: Selection) => Promise<NavigationCapabilities>;
   onSource: (side: Side, file?: ChangedFile) => void;
   onLoadContent: (file: ChangedFile, side: Side) => Promise<string>;
-  navigation?: NavigationResult;
   onLocation: (location: CodeLocation) => void;
-  onDismissNavigation: () => void;
   onCloseSource: () => void;
   onComment: (selection: Selection) => void;
   onAsk: () => void;
@@ -165,28 +170,96 @@ function Tokens({
 
 export function CodePanel(props: Props) {
   const scroller = useRef<HTMLDivElement>(null);
+  const onActiveFile = useRef(props.onActiveFile);
+  onActiveFile.current = props.onActiveFile;
   useEffect(() => {
-    const target = Array.from(
-      scroller.current?.querySelectorAll<HTMLElement>("[data-review-file]") ||
-        [],
-    ).find((element) => element.dataset.reviewFile === props.file.path);
-    if (target && scroller.current)
-      scroller.current.scrollTop +=
-        target.getBoundingClientRect().top -
-        scroller.current.getBoundingClientRect().top;
-  }, [props.file.path]);
+    let frame = 0;
+    function align() {
+      const container = scroller.current;
+      if (!container) return;
+      const target = Array.from(
+        container.querySelectorAll<HTMLElement>("[data-review-file]"),
+      ).find(
+        (element) => element.dataset.reviewFile === props.scrollTarget.path,
+      );
+      if (target)
+        container.scrollTop +=
+          target.getBoundingClientRect().top -
+          container.getBoundingClientRect().top;
+    }
+    align();
+    // Nearby placeholders can mount after the explicit jump changes visibility.
+    frame = requestAnimationFrame(() => {
+      align();
+      frame = requestAnimationFrame(align);
+    });
+    const container = scroller.current;
+    function cancelAlignment() {
+      cancelAnimationFrame(frame);
+    }
+    container?.addEventListener("wheel", cancelAlignment, { passive: true });
+    container?.addEventListener("pointerdown", cancelAlignment);
+    container?.addEventListener("keydown", cancelAlignment);
+    return () => {
+      cancelAlignment();
+      container?.removeEventListener("wheel", cancelAlignment);
+      container?.removeEventListener("pointerdown", cancelAlignment);
+      container?.removeEventListener("keydown", cancelAlignment);
+    };
+  }, [props.scrollTarget]);
+  useEffect(() => {
+    const container = scroller.current;
+    if (!container) return;
+    const files = Array.from(
+      container.querySelectorAll<HTMLElement>("[data-review-file]"),
+    );
+    let frame = 0;
+    let lastPath: string | undefined;
+    function updateActive() {
+      frame = 0;
+      if (!container || !files.length || !container.clientHeight) return;
+      const top = container.getBoundingClientRect().top + 8;
+      let active = files[0];
+      for (const file of files) {
+        if (file.getBoundingClientRect().top > top) break;
+        active = file;
+      }
+      if (
+        container.scrollTop > 0 &&
+        container.scrollTop + container.clientHeight >=
+          container.scrollHeight - 1
+      )
+        active = files[files.length - 1];
+      const path = active.dataset.reviewFile;
+      if (path && path !== lastPath) {
+        lastPath = path;
+        onActiveFile.current(path);
+      }
+    }
+    function schedule() {
+      if (!frame) frame = requestAnimationFrame(updateActive);
+    }
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? undefined
+        : new ResizeObserver(schedule);
+    observer?.observe(container);
+    files.forEach((file) => observer?.observe(file));
+    container.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    schedule();
+    return () => {
+      cancelAnimationFrame(frame);
+      observer?.disconnect();
+      container.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
+  }, [props.pr.files]);
   return (
     <section
       className="continuous-review"
       aria-label="Pull request code review"
     >
-      <ReviewNavigation
-        result={props.navigation}
-        method={props.method}
-        busy={props.busy}
-        onLocation={props.onLocation}
-        onDismiss={props.onDismissNavigation}
-      />
       <div className={`continuous-layout ${props.source ? "has-source" : ""}`}>
         <div
           className="continuous-diffs"
@@ -273,12 +346,15 @@ function FileCodePanel({
   onMethod,
   onSelect,
   onNavigate,
+  onLocation,
   onCapabilities,
   onSource,
   onLoadContent,
   onCloseSource,
   onComment,
   onAsk,
+  viewed,
+  onViewed,
   sourceOnly = false,
 }: Props & { sourceOnly?: boolean }) {
   const actionOwner = useId();
@@ -292,6 +368,10 @@ function FileCodePanel({
   const [expanded, setExpanded] = useState<Record<string, number>>({});
   const [expanding, setExpanding] = useState<string>();
   const [contextError, setContextError] = useState("");
+  const [checkingContext, setCheckingContext] = useState(false);
+  const contextRequest = useRef<Promise<DiffContextContent> | undefined>(
+    undefined,
+  );
   const contextEpoch = useRef(0);
   const [actions, setActions] = useState<ActionAnchor>();
   const actionRef = useRef<ActionAnchor | undefined>(undefined);
@@ -312,6 +392,50 @@ function FileCodePanel({
     () => buildDiffContext(lines, contextContent, expanded),
     [lines, contextContent, expanded],
   );
+  const loadContext = useCallback(() => {
+    if (contextRequest.current) return contextRequest.current;
+    const request = Promise.all([
+      file.status === "added"
+        ? Promise.resolve("")
+        : onLoadContent(file, "LEFT"),
+      file.status === "removed"
+        ? Promise.resolve("")
+        : onLoadContent(file, "RIGHT"),
+    ])
+      .then(([base, head]) => ({ base, head }))
+      .catch((error) => {
+        contextRequest.current = undefined;
+        throw error;
+      });
+    contextRequest.current = request;
+    return request;
+  }, [file, onLoadContent]);
+  const [contextAttempt, setContextAttempt] = useState(0);
+  useEffect(() => {
+    if (
+      sourceOnly ||
+      file.status === "added" ||
+      file.status === "removed" ||
+      !lines.some((line) => line.kind === "hunk")
+    )
+      return;
+    let active = true;
+    setCheckingContext(true);
+    setContextError("");
+    void loadContext()
+      .then((content) => {
+        if (active) setContextContent(content);
+      })
+      .catch(() => {
+        if (active) setContextError("Could not check omitted context.");
+      })
+      .finally(() => {
+        if (active) setCheckingContext(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [sourceOnly, file.status, lines, loadContext, contextAttempt]);
   async function expandContext(key: string) {
     if (expanding) return;
     const requestEpoch = ++contextEpoch.current;
@@ -319,16 +443,9 @@ function FileCodePanel({
     setContextError("");
     try {
       if (!contextContent) {
-        const [base, head] = await Promise.all([
-          file.status === "added"
-            ? Promise.resolve(undefined)
-            : onLoadContent(file, "LEFT"),
-          file.status === "removed"
-            ? Promise.resolve(undefined)
-            : onLoadContent(file, "RIGHT"),
-        ]);
+        const content = await loadContext();
         if (contextEpoch.current !== requestEpoch) return;
-        setContextContent({ base, head });
+        setContextContent(content);
       }
       if (contextEpoch.current === requestEpoch)
         setExpanded((current) => ({
@@ -517,7 +634,20 @@ function FileCodePanel({
               <span className="eyebrow">CHANGED FILE</span>
               <h2>{file.path}</h2>
             </div>
-            <span className="file-status">{file.status}</span>
+            <div className="file-review-controls">
+              <span className="file-status">{file.status}</span>
+              <label className="viewed-control">
+                <input
+                  type="checkbox"
+                  aria-label={`Mark ${file.path} as viewed`}
+                  checked={viewed.has(file.path)}
+                  onChange={(event) =>
+                    onViewed(file.path, event.target.checked)
+                  }
+                />
+                Viewed
+              </label>
+            </div>
           </div>
           <div className="code-toolbar">
             <span>
@@ -557,6 +687,26 @@ function FileCodePanel({
                           disabled={!!expanding}
                           onClick={() => void expandContext(row.key)}
                         >
+                          <svg
+                            className="context-direction"
+                            aria-hidden="true"
+                            viewBox="0 0 16 16"
+                            width="16"
+                            height="16"
+                            fill="none"
+                            stroke="currentColor"
+                            strokeWidth="1.5"
+                          >
+                            <path d="M8 2v12" />
+                            {row.key.startsWith("before:") ||
+                            row.key.startsWith("between:") ? (
+                              <path d="m4 6 4-4 4 4" />
+                            ) : null}
+                            {row.key.startsWith("after:") ||
+                            row.key.startsWith("between:") ? (
+                              <path d="m4 10 4 4 4-4" />
+                            ) : null}
+                          </svg>
                           {expanding === row.key
                             ? "Loading context..."
                             : row.label}
@@ -659,9 +809,20 @@ function FileCodePanel({
           {contextError && (
             <div className="range-feedback" role="status">
               {contextError}
+              <button
+                type="button"
+                onClick={() => setContextAttempt((attempt) => attempt + 1)}
+              >
+                Retry context
+              </button>
             </div>
           )}
-          {contextContent && (
+          {checkingContext && (
+            <div className="diff-context-note" role="status">
+              Checking omitted context...
+            </div>
+          )}
+          {Object.keys(expanded).length > 0 && (
             <div className="diff-context-note">
               Expanded context supports code navigation. Comments belong on
               lines in the original diff.
@@ -776,11 +937,10 @@ function FileCodePanel({
           onLeave={leaveActions}
           onCapabilities={onCapabilities}
           onNavigate={(selected, action) => {
-            closeActions();
-            onSelect(selected);
             onMethod(action);
-            onNavigate(selected, action);
+            return onNavigate(selected, action);
           }}
+          onLocation={onLocation}
           onComment={(selected) => {
             closeActions();
             onComment(selected);

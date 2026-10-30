@@ -1,7 +1,12 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { commentLineLabel } from "./comment-range";
-import type { Method, Selection } from "./types";
+import type {
+  CodeLocation,
+  Method,
+  NavigationResult,
+  Selection,
+} from "./types";
 import { watchCapabilities } from "./navigation-capabilities";
 import type {
   CapabilityLoader,
@@ -29,7 +34,11 @@ interface Props {
   onClose: (restoreFocus?: boolean) => void;
   onEnter: () => void;
   onLeave: () => void;
-  onNavigate: (selection: Selection, method: Method) => void;
+  onNavigate: (
+    selection: Selection,
+    method: Method,
+  ) => Promise<NavigationResult | undefined>;
+  onLocation: (location: CodeLocation) => void;
   onCapabilities: CapabilityLoader;
   onComment: (selection: Selection) => void;
   onAsk: (selection: Selection) => void;
@@ -42,6 +51,7 @@ export function ContextActions({
   onEnter,
   onLeave,
   onNavigate,
+  onLocation,
   onCapabilities,
   onComment,
   onAsk,
@@ -49,6 +59,85 @@ export function ContextActions({
   const panel = useRef<HTMLDivElement>(null);
   const [position, setPosition] = useState({ left: 8, top: 8, ready: false });
   const { selection } = anchor;
+  const navigationEpoch = useRef(0);
+  const currentSelection = useRef(selection);
+  currentSelection.current = selection;
+  const focusTarget = useRef<"back" | Method | undefined>(undefined);
+  const [navigation, setNavigation] = useState<{
+    selection: Selection;
+    method: Method;
+    status: "loading" | "ready" | "error";
+    result?: NavigationResult;
+    error?: string;
+  }>();
+  const activeNavigation =
+    navigation?.selection === selection ? navigation : undefined;
+  useEffect(
+    () => () => {
+      navigationEpoch.current++;
+    },
+    [selection],
+  );
+
+  async function navigate(method: Method) {
+    const epoch = ++navigationEpoch.current;
+    onEnter();
+    focusTarget.current = "back";
+    setNavigation({ selection, method, status: "loading" });
+    try {
+      const next = await onNavigate(selection, method);
+      if (
+        navigationEpoch.current !== epoch ||
+        currentSelection.current !== selection
+      )
+        return;
+      setNavigation(
+        next
+          ? { selection, method, status: "ready", result: next }
+          : {
+              selection,
+              method,
+              status: "error",
+              error: "Navigation did not complete. Go back to try again.",
+            },
+      );
+    } catch (error) {
+      if (
+        navigationEpoch.current !== epoch ||
+        currentSelection.current !== selection
+      )
+        return;
+      setNavigation({
+        selection,
+        method,
+        status: "error",
+        error:
+          error instanceof Error
+            ? error.message
+            : "Navigation is unavailable. Go back to try again.",
+      });
+    }
+  }
+
+  function backToActions() {
+    navigationEpoch.current++;
+    focusTarget.current = activeNavigation?.method;
+    setNavigation(undefined);
+  }
+
+  useLayoutEffect(() => {
+    const target = focusTarget.current;
+    if (!target) return;
+    const button =
+      panel.current?.querySelector<HTMLButtonElement>(
+        `[data-navigation-focus="${target}"]:not(:disabled)`,
+      ) ||
+      panel.current?.querySelector<HTMLButtonElement>(
+        ":scope > button:not(:disabled)",
+      );
+    button?.focus({ preventScroll: true });
+    focusTarget.current = undefined;
+  }, [activeNavigation]);
   const [attempt, setAttempt] = useState(0);
   const request = useMemo(
     () => ({ selection, load: onCapabilities, attempt }),
@@ -126,7 +215,7 @@ export function ContextActions({
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
-  }, [anchor.element, anchor.selection, onClose, result]);
+  }, [anchor.element, anchor.selection, onClose, result, activeNavigation]);
 
   useEffect(() => {
     if (anchor.activated)
@@ -173,10 +262,16 @@ export function ContextActions({
         visibility: position.ready ? "visible" : "hidden",
       }}
       onPointerEnter={onEnter}
-      onPointerLeave={onLeave}
+      onPointerLeave={() => {
+        if (!activeNavigation) onLeave();
+      }}
       onFocus={onEnter}
       onBlur={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget)) onLeave();
+        if (
+          !activeNavigation &&
+          !event.currentTarget.contains(event.relatedTarget)
+        )
+          onLeave();
       }}
     >
       <div className="context-action-heading">
@@ -199,43 +294,132 @@ export function ContextActions({
           x
         </button>
       </div>
-      {methods.map((method) => (
-        <button
-          key={method}
-          type="button"
-          disabled={busy}
-          onClick={() => onNavigate(selection, method)}
-        >
-          <span>{labels[method]}</span>
-          <span aria-hidden="true">&rarr;</span>
-        </button>
-      ))}
-      {selection.word && capabilityState.status === "loading" && (
-        <p className="context-support-note" role="status">
-          Loading code navigation...
-        </p>
-      )}
-      {selection.word && capabilityState.status === "error" && (
+      {activeNavigation ? (
         <>
-          <p className="context-support-note" role="status">
-            Could not load code navigation. You can try again.
-          </p>
           <button
             type="button"
-            onClick={() => setAttempt((value) => value + 1)}
+            data-navigation-focus="back"
+            onClick={backToActions}
           >
-            Retry code navigation
+            <span aria-hidden="true">&larr;</span>
+            <span>Back to actions</span>
           </button>
+          <div
+            className="context-navigation"
+            role="group"
+            aria-label={`${labels[activeNavigation.method]} results`}
+            aria-busy={activeNavigation.status === "loading"}
+          >
+            <p className="context-result-title">
+              {labels[activeNavigation.method]}
+            </p>
+            {activeNavigation.status === "loading" && (
+              <p className="context-support-note" role="status">
+                Loading{" "}
+                {activeNavigation.method === "hover"
+                  ? "type information"
+                  : "destinations"}
+                ...
+              </p>
+            )}
+            {activeNavigation.status === "error" && (
+              <p className="context-support-note" role="alert">
+                {activeNavigation.error}
+              </p>
+            )}
+            {activeNavigation.status === "ready" && (
+              <>
+                {!!activeNavigation.result?.hover && (
+                  <pre className="context-hover-result">
+                    {activeNavigation.result.hover}
+                  </pre>
+                )}
+                {!!activeNavigation.result?.locations?.length && (
+                  <>
+                    <p className="context-support-note" role="status">
+                      {activeNavigation.result.locations.length}{" "}
+                      {activeNavigation.method === "references"
+                        ? "references"
+                        : "destinations"}
+                    </p>
+                    <div
+                      className="context-destinations"
+                      role="group"
+                      aria-label="Navigation destinations"
+                    >
+                      {activeNavigation.result.locations.map(
+                        (location, index) => (
+                          <button
+                            type="button"
+                            key={`${location.path}:${location.line}:${location.character}:${index}`}
+                            onClick={() => {
+                              onClose();
+                              onLocation(location);
+                            }}
+                          >
+                            <span>
+                              {location.path}:{location.line + 1}
+                            </span>
+                            <span aria-hidden="true">&rarr;</span>
+                          </button>
+                        ),
+                      )}
+                    </div>
+                  </>
+                )}
+                {!activeNavigation.result?.hover &&
+                  !activeNavigation.result?.locations?.length && (
+                    <p className="context-support-note" role="status">
+                      {activeNavigation.result?.message ||
+                        "No results for this symbol."}
+                    </p>
+                  )}
+              </>
+            )}
+          </div>
+        </>
+      ) : (
+        <>
+          {methods.map((method) => (
+            <button
+              key={method}
+              type="button"
+              disabled={busy}
+              data-navigation-focus={method}
+              onClick={() => void navigate(method)}
+            >
+              <span>{labels[method]}</span>
+              <span aria-hidden="true">&rarr;</span>
+            </button>
+          ))}
+          {selection.word && capabilityState.status === "loading" && (
+            <p className="context-support-note" role="status">
+              Loading code navigation...
+            </p>
+          )}
+          {selection.word && capabilityState.status === "error" && (
+            <>
+              <p className="context-support-note" role="status">
+                Could not load code navigation. You can try again.
+              </p>
+              <button
+                type="button"
+                onClick={() => setAttempt((value) => value + 1)}
+              >
+                Retry code navigation
+              </button>
+            </>
+          )}
+          {selection.word &&
+            capabilityState.status === "ready" &&
+            (capabilityState.capabilities.message || !methods.length) && (
+              <p className="context-support-note" role="status">
+                {capabilityState.capabilities.message ||
+                  "No code navigation actions are available for this file."}
+              </p>
+            )}
         </>
       )}
-      {selection.word &&
-        capabilityState.status === "ready" &&
-        (capabilityState.capabilities.message || !methods.length) && (
-          <p className="context-support-note" role="status">
-            {capabilityState.capabilities.message ||
-              "No code navigation actions are available for this file."}
-          </p>
-        )}
       {anchor.commentable && (
         <button
           type="button"
