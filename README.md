@@ -52,7 +52,7 @@ Branch protection remains responsible for dismissing stale approvals.
 GitHub remains the source of truth.
 
 Hover or activate a symbol to open its code actions.
-Choose **Go to** for Definition, References, or Implementation when the server supports them; Type information remains a separate action.
+Choose **Go to** to look up definitions and references together. The same popup shows definitions first, followed by references.
 Targets can be unchanged files anywhere in the extracted revision and open in the source pane without adding them to the changed-file list.
 Use the line-number gutter to select a line or drag a range, then choose the comment action.
 Shift-click extends a selection without dragging.
@@ -128,9 +128,35 @@ Servers receive a clean environment, read-only source, temporary writable storag
 Repository configuration may influence the language server itself, so its executable and runtime paths must be trusted.
 Fjord does not run repository installation hooks or fetch dependencies for it.
 
-Symbol menus discover definition, implementation, references, and hover support from the server's actual `initialize` response.
+Symbol menus discover navigation and inspection support from the server's actual `initialize` response.
 Unsupported actions stay hidden; server startup failures offer a retry without blocking comments or AI.
 The transport currently supports stdio and UTF-16 positions, not remote TCP/WebSocket servers or other position encodings.
+
+## Language-server review tools
+
+Symbol popups and each file's **Code tools** button expose the features its language server supports:
+
+| Feature | Use during review |
+| --- | --- |
+| Diagnostics | Read errors, warnings, and hints, then open the reported location. |
+| Incoming / outgoing calls | Follow callers or callees, including reported call sites. |
+| Supertypes / subtypes | Explore the selected type's hierarchy. |
+| File outline | Browse nested functions, types, and declarations. |
+| Workspace symbols | Search declarations across the selected project root, including unchanged files. |
+| Highlight occurrences | Mark reads and writes of the selected symbol inline. |
+| Inlay hints | Show inferred types or parameter names without changing source offsets. |
+| Code actions | Inspect a proposed fix and explicitly add review suggestion drafts. |
+| Preview rename | Enter a new name and inspect the edits across files. |
+
+Results stay in the initiating popup. Inline annotations are tied to the exact file and revision and can be cleared.
+The Go default profile enables parameter-name, assigned-variable-type, and range-variable-type hints; custom servers may require their own hint settings.
+Diagnostics use pull reports when available or wait briefly for push publications. A server that has not published is reported as pending, not as having no problems.
+
+Code actions and rename never modify the workspace. Server commands and file creation, deletion, or renaming are not executed.
+Edit previews validate every source range and reject overlapping or out-of-revision changes.
+Code actions can become suggestions only when every edit fits existing head-side PR diff lines; edits on the same line are combined and multiline review boundaries are preserved.
+Fixes that touch unchanged files remain previews because GitHub inline suggestions must attach to reviewable diff lines.
+Available results still depend on installed dependencies and the server's indexing; bounded response and source limits prevent oversized results from blocking the review.
 
 ## Containers
 

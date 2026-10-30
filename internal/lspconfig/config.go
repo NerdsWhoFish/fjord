@@ -47,7 +47,7 @@ func Defaults() []Profile {
 		}
 	}
 	return []Profile{
-		{Name: "go", Command: []string{"gopls", "serve"}, Files: []string{"**/*.go"}, LanguageID: "go", RootMarkers: []string{"go.mod"}, RootRequired: true, Adapter: "go", InitializationOptions: map[string]any{"staticcheck": false, "checkBugReports": false, "telemetryPrompt": false}},
+		{Name: "go", Command: []string{"gopls", "serve"}, Files: []string{"**/*.go"}, LanguageID: "go", RootMarkers: []string{"go.mod"}, RootRequired: true, Adapter: "go", InitializationOptions: map[string]any{"staticcheck": false, "checkBugReports": false, "telemetryPrompt": false, "hints": map[string]any{"parameterNames": true, "assignVariableTypes": true, "rangeVariableTypes": true}}},
 		{Name: "terraform", Command: []string{"tofu-ls", "serve"}, Files: []string{"**/*.tf", "**/*.tf.json", "**/*.tofu"}, LanguageID: "opentofu", Adapter: "generic", InitializationOptions: terraformOptions(), Environment: map[string]string{"TF_IN_AUTOMATION": "1", "CHECKPOINT_DISABLE": "1"}},
 		{Name: "terraform-vars", Command: []string{"tofu-ls", "serve"}, Files: []string{"**/*.tfvars", "**/*.tfvars.json"}, LanguageID: "opentofu-vars", Adapter: "generic", InitializationOptions: terraformOptions(), Environment: map[string]string{"TF_IN_AUTOMATION": "1", "CHECKPOINT_DISABLE": "1"}},
 	}

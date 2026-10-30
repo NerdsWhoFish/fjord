@@ -1,5 +1,60 @@
 export type Side = "LEFT" | "RIGHT";
-export type Method = "definition" | "implementation" | "references" | "hover";
+export type Method =
+  | "goTo"
+  | "definition"
+  | "implementation"
+  | "references"
+  | "hover"
+  | "diagnostics"
+  | "incomingCalls"
+  | "outgoingCalls"
+  | "supertypes"
+  | "subtypes"
+  | "documentSymbols"
+  | "workspaceSymbols"
+  | "documentHighlights"
+  | "inlayHints"
+  | "codeActions"
+  | "rename";
+export interface QueryOptions {
+  query?: string;
+  newName?: string;
+}
+export interface ReviewItem {
+  label: string;
+  detail?: string;
+  kind?: string;
+  location?: CodeLocation;
+  children?: ReviewItem[];
+}
+export interface DocumentHighlight {
+  location: CodeLocation;
+  kind?: string;
+}
+export interface InlayHint {
+  location: CodeLocation;
+  label: string;
+  kind?: string;
+  paddingLeft?: boolean;
+  paddingRight?: boolean;
+}
+export interface TextEdit {
+  location: CodeLocation;
+  newText: string;
+  oldText?: string;
+}
+export interface ReviewAction {
+  title: string;
+  kind?: string;
+  edits?: TextEdit[];
+  disabledReason?: string;
+}
+export interface CodeAnnotations {
+  path: string;
+  sha: string;
+  highlights?: DocumentHighlight[];
+  hints?: InlayHint[];
+}
 export interface NavigationCapabilities {
   server: string;
   languageId: string;
@@ -61,6 +116,13 @@ export interface NavigationResult {
   locations: CodeLocation[];
   hover: string;
   message?: string;
+  definitions?: CodeLocation[];
+  references?: CodeLocation[];
+  items?: ReviewItem[];
+  highlights?: DocumentHighlight[];
+  hints?: InlayHint[];
+  actions?: ReviewAction[];
+  edits?: TextEdit[];
 }
 export interface Selection {
   path: string;

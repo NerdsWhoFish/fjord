@@ -8,16 +8,21 @@ import {
 } from "react";
 import type { ReactNode } from "react";
 import { linePosition, parsePatch, tokenize } from "./diff";
-import { SyntaxText } from "./SyntaxText";
+import { AnnotatedText } from "./AnnotatedText";
+import { annotationsForLine } from "./code-annotations";
+import type { LineAnnotations } from "./code-annotations";
 import { useSyntax } from "./useSyntax";
 import type { HighlightSpan, SyntaxRequest } from "./syntax-types";
 import type {
   ChangedFile,
+  CodeAnnotations,
   CodeLocation,
   Method,
   NavigationCapabilities,
   NavigationResult,
   PullRequest,
+  QueryOptions,
+  ReviewAction,
   Selection,
   Side,
   SourceView,
@@ -49,7 +54,11 @@ interface Props {
   onNavigate: (
     selection?: Selection,
     method?: Method,
+    options?: QueryOptions,
   ) => Promise<NavigationResult | undefined>;
+  onSuggest: (action: ReviewAction, selection: Selection) => Promise<void>;
+  annotations?: CodeAnnotations;
+  onClearAnnotations: () => void;
   onCapabilities: (selection: Selection) => Promise<NavigationCapabilities>;
   onSource: (side: Side, file?: ChangedFile) => void;
   onLoadContent: (file: ChangedFile, side: Side) => Promise<string>;
@@ -62,11 +71,13 @@ interface Props {
 function Tokens({
   code,
   spans,
+  annotations,
   onIntent,
   onLeave,
 }: {
   code: string;
   spans?: HighlightSpan[];
+  annotations?: LineAnnotations;
   onIntent: (
     element: HTMLElement,
     word: string,
@@ -78,7 +89,12 @@ function Tokens({
   if (code.length > 4096)
     return (
       <span>
-        {code.slice(0, 4096)}
+        <AnnotatedText
+          text={code.slice(0, 4096)}
+          spans={spans}
+          annotations={annotations}
+          includeEnd
+        />
         <span className="long-line-notice">
           {" "}
           [Long line: showing 4,096 of {code.length.toLocaleString()}{" "}
@@ -90,7 +106,12 @@ function Tokens({
   if (tokens.length > 128)
     return (
       <span>
-        {code}
+        <AnnotatedText
+          text={code}
+          spans={spans}
+          annotations={annotations}
+          includeEnd
+        />
         <span className="long-line-notice">
           {" "}
           [Symbol navigation is disabled for this unusually dense line.]
@@ -99,6 +120,14 @@ function Tokens({
     );
   return (
     <>
+      {!tokens.length && (
+        <AnnotatedText
+          text=""
+          spans={spans}
+          annotations={annotations}
+          includeEnd
+        />
+      )}
       {tokens.map((token, i) =>
         token.symbol ? (
           <button
@@ -153,14 +182,22 @@ function Tokens({
             aria-label={`Inspect ${token.text}`}
             aria-haspopup="dialog"
           >
-            <SyntaxText text={token.text} start={token.column} spans={spans} />
+            <AnnotatedText
+              text={token.text}
+              start={token.column}
+              spans={spans}
+              annotations={annotations}
+              includeEnd={i === tokens.length - 1}
+            />
           </button>
         ) : (
-          <SyntaxText
+          <AnnotatedText
             key={i}
             text={token.text}
             start={token.column}
             spans={spans}
+            annotations={annotations}
+            includeEnd={i === tokens.length - 1}
           />
         ),
       )}
@@ -346,6 +383,9 @@ function FileCodePanel({
   onMethod,
   onSelect,
   onNavigate,
+  onSuggest,
+  annotations,
+  onClearAnnotations,
   onLocation,
   onCapabilities,
   onSource,
@@ -509,6 +549,33 @@ function FileCodePanel({
     actionRef.current = next;
     setActions(next);
   }
+  function fileTools(element: HTMLElement, path: string, sha: string) {
+    showActions({
+      element,
+      selection: {
+        path,
+        sha,
+        side: sha === pr.baseSHA ? "LEFT" : "RIGHT",
+        line: 1,
+        character: 0,
+        word: path,
+        code: "",
+      },
+      activated: true,
+      pinned: true,
+      commentable: false,
+      scope: "file",
+    });
+  }
+  const diffAnnotations =
+    annotations &&
+    ((annotations.sha === pr.headSHA && annotations.path === file.path) ||
+      (annotations.sha === pr.baseSHA &&
+        annotations.path === (file.previousPath || file.path)));
+  const sourceAnnotations =
+    source &&
+    annotations?.path === source.path &&
+    annotations.sha === source.sha;
   function rangeSelection(range: CommentRange): Selection {
     return {
       path:
@@ -635,6 +702,21 @@ function FileCodePanel({
               <h2>{file.path}</h2>
             </div>
             <div className="file-review-controls">
+              <button
+                type="button"
+                aria-label={`Code tools for ${file.path}`}
+                onClick={(event) =>
+                  fileTools(
+                    event.currentTarget,
+                    file.status === "removed"
+                      ? file.previousPath || file.path
+                      : file.path,
+                    file.status === "removed" ? pr.baseSHA : pr.headSHA,
+                  )
+                }
+              >
+                Code tools
+              </button>
               <span className="file-status">{file.status}</span>
               <label className="viewed-control">
                 <input
@@ -655,6 +737,11 @@ function FileCodePanel({
               <b className="deletion">-{file.deletions}</b>
             </span>
             <div className="button-group">
+              {diffAnnotations && (
+                <button type="button" onClick={onClearAnnotations}>
+                  Clear annotations
+                </button>
+              )}
               <button
                 disabled={busy || file.status === "added"}
                 onClick={() => onSource("LEFT", file)}
@@ -777,6 +864,22 @@ function FileCodePanel({
                           <Tokens
                             code={line.text}
                             spans={diffSyntax.lines[renderedIndex]}
+                            annotations={annotationsForLine(
+                              annotations,
+                              annotations?.sha === pr.baseSHA &&
+                                line.oldLine !== undefined
+                                ? file.previousPath || file.path
+                                : file.path,
+                              annotations?.sha === pr.baseSHA &&
+                                line.oldLine !== undefined
+                                ? pr.baseSHA
+                                : pr.headSHA,
+                              (annotations?.sha === pr.baseSHA &&
+                              line.oldLine !== undefined
+                                ? line.oldLine
+                                : (line.newLine ?? -1)) - 1,
+                              line.text,
+                            )}
                             onIntent={(element, word, column, intent) =>
                               symbolIntent(
                                 element,
@@ -852,13 +955,29 @@ function FileCodePanel({
               </span>
               <h2>{source.path}</h2>
             </div>
-            <button
-              className="icon-button"
-              onClick={onCloseSource}
-              aria-label="Close source pane"
-            >
-              x
-            </button>
+            <div className="source-review-controls">
+              <button
+                type="button"
+                aria-label={`Code tools for ${source.path}`}
+                onClick={(event) =>
+                  fileTools(event.currentTarget, source.path, source.sha)
+                }
+              >
+                Code tools
+              </button>
+              {sourceAnnotations && (
+                <button type="button" onClick={onClearAnnotations}>
+                  Clear annotations
+                </button>
+              )}
+              <button
+                className="icon-button"
+                onClick={onCloseSource}
+                aria-label="Close source pane"
+              >
+                x
+              </button>
+            </div>
           </div>
           {sourceLines.length > 200 && (
             <div className="page-controls">
@@ -901,6 +1020,13 @@ function FileCodePanel({
                       <Tokens
                         code={code}
                         spans={sourceSyntax.lines[i]}
+                        annotations={annotationsForLine(
+                          annotations,
+                          source.path,
+                          source.sha,
+                          i,
+                          code,
+                        )}
                         onIntent={(element, word, character, intent) =>
                           symbolIntent(
                             element,
@@ -936,10 +1062,12 @@ function FileCodePanel({
           onEnter={holdActions}
           onLeave={leaveActions}
           onCapabilities={onCapabilities}
-          onNavigate={(selected, action) => {
+          onNavigate={(selected, action, options) => {
             onMethod(action);
-            return onNavigate(selected, action);
+            return onNavigate(selected, action, options);
           }}
+          onSuggest={onSuggest}
+          onClearAnnotations={onClearAnnotations}
           onLocation={onLocation}
           onComment={(selected) => {
             closeActions();

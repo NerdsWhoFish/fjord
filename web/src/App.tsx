@@ -8,14 +8,19 @@ import { demoBaseSource, demoPR, demoSource, demoThreads } from "./demo";
 import { emptyDraft, readDraft, ReviewPanel, writeDraft } from "./ReviewPanel";
 import type { ReviewDraft } from "./ReviewPanel";
 import { captureError, startTelemetry } from "./telemetry";
+import { combinedNavigation } from "./combined-navigation";
+import { codeActionSuggestions } from "./code-action-suggestions";
 import type {
   CodeLocation,
   ChangedFile,
   Config,
+  CodeAnnotations,
   Method,
   NavigationResult,
   NavigationCapabilities,
   PullRequest,
+  QueryOptions,
+  ReviewAction,
   Selection,
   SourceView,
   ThreadComment,
@@ -47,11 +52,14 @@ export function App() {
   const [scrollTarget, setScrollTarget] = useState({ path: "" });
   const [selection, setSelection] = useState<Selection>();
   const [source, setSource] = useState<SourceView>();
+  const [annotations, setAnnotations] = useState<CodeAnnotations>();
   const [method, setMethod] = useState<Method>("definition");
   const [navigating, setNavigating] = useState(false);
   const [navWorkspace, setNavWorkspace] = useState("");
   const [navSHA, setNavSHA] = useState("");
   const [draft, setDraft] = useState<ReviewDraft>(emptyDraft);
+  const draftRef = useRef(draft);
+  draftRef.current = draft;
   const [pendingComment, setPendingComment] = useState<Selection>();
   const [threads, setThreads] = useState<ThreadComment[]>([]);
   const [threadsError, setThreadsError] = useState("");
@@ -175,6 +183,7 @@ export function App() {
     setSelectedFile(next.files[0]?.path || "");
     setScrollTarget({ path: next.files[0]?.path || "" });
     setSource(undefined);
+    setAnnotations(undefined);
     setSelection(undefined);
     setDraft(readDraft(next, isDemo));
     setViewed(new Set());
@@ -335,7 +344,11 @@ export function App() {
       if (epoch.current === requestEpoch) setNavigating(false);
     }
   }
-  async function navigate(nextSelection = selection, nextMethod = method) {
+  async function navigate(
+    nextSelection = selection,
+    nextMethod = method,
+    options?: QueryOptions,
+  ) {
     if (!pr || !nextSelection) return;
     setSelection(nextSelection);
     setMethod(nextMethod);
@@ -351,35 +364,57 @@ export function App() {
         Open: ["internal/harbor/connect.go", 5],
       };
       const target = demoSymbol[nextSelection.word];
-      const result: NavigationResult = demo
-        ? {
-            locations:
-              nextMethod === "hover" || !target
-                ? []
-                : [
-                    {
-                      path: target[0],
-                      line: target[1],
-                      character: 0,
-                      endLine: target[1],
-                      endCharacter: nextSelection.word.length,
-                    },
-                  ],
-            hover:
-              nextMethod === "hover"
-                ? `Illustrative type information for ${nextSelection.word}. Open a real PR for language-server results.`
-                : "",
-          }
-        : await api<NavigationResult>("navigate", {
-            id: workspace,
-            path: nextSelection.path,
-            method: nextMethod,
-            line: nextSelection.line - 1,
-            character: nextSelection.character,
-          });
+      const query = async (action: Method): Promise<NavigationResult> =>
+        demo
+          ? {
+              locations:
+                action === "hover" || !target
+                  ? []
+                  : [
+                      {
+                        path: target[0],
+                        line: target[1],
+                        character: 0,
+                        endLine: target[1],
+                        endCharacter: nextSelection.word.length,
+                      },
+                    ],
+              hover:
+                action === "hover"
+                  ? `Illustrative type information for ${nextSelection.word}. Open a real PR for language-server results.`
+                  : "",
+            }
+          : await api<NavigationResult>("navigate", {
+              id: workspace,
+              path: nextSelection.path,
+              method: action,
+              line: nextSelection.line - 1,
+              character: nextSelection.character,
+              options,
+            });
+      const result =
+        nextMethod === "goTo"
+          ? await combinedNavigation(
+              (await navigationCapabilities(nextSelection)).methods,
+              query,
+            )
+          : await query(nextMethod);
       if (epoch.current !== requestEpoch) return;
       setNavWorkspace(workspace);
       setNavSHA(nextSelection.sha);
+      if (nextMethod === "documentHighlights" || nextMethod === "inlayHints") {
+        setAnnotations((previous) => ({
+          ...(previous?.path === nextSelection.path &&
+          previous.sha === nextSelection.sha
+            ? previous
+            : {}),
+          path: nextSelection.path,
+          sha: nextSelection.sha,
+          ...(nextMethod === "documentHighlights"
+            ? { highlights: result.highlights || [] }
+            : { hints: result.hints || [] }),
+        }));
+      }
       return result;
     } catch (error) {
       captureError(error, "navigate");
@@ -395,6 +430,66 @@ export function App() {
     } finally {
       if (epoch.current === requestEpoch) setNavigating(false);
     }
+  }
+  async function suggestAction(action: ReviewAction, selected: Selection) {
+    if (!pr || selected.sha !== pr.headSHA || selected.side !== "RIGHT")
+      throw new Error("Review suggestions must target the head revision.");
+    if (action.disabledReason || !action.edits?.length)
+      throw new Error(
+        action.disabledReason || "This action has no editable changes.",
+      );
+    const currentPR = prEpoch.current;
+    const paths = [...new Set(action.edits.map((edit) => edit.location.path))];
+    if (
+      paths.some(
+        (path) =>
+          !pr.files.some(
+            (file) => file.path === path && file.status !== "removed",
+          ),
+      )
+    )
+      throw new Error(
+        "This fix touches files outside the PR diff. Its edits can be previewed but cannot become inline review suggestions.",
+      );
+    const workspace = await ensureWorkspace(pr.headSHA);
+    const contents = Object.fromEntries(
+      await Promise.all(
+        paths.map(async (path) => [
+          path,
+          demo
+            ? demoSource[path] || ""
+            : (
+                await api<{ content: string }>("workspace/file", {
+                  id: workspace,
+                  path,
+                })
+              ).content,
+        ]),
+      ),
+    );
+    const suggestions = codeActionSuggestions(pr.files, action.edits, contents);
+    if (draftRef.current.comments.length + suggestions.length > 100)
+      throw new Error(
+        "This fix would exceed the review limit of 100 comments. Submit or remove existing drafts first.",
+      );
+    if (currentPR !== prEpoch.current)
+      throw new Error(
+        "The pull request changed before suggestions were prepared.",
+      );
+    const added = suggestions.map((suggestion) => ({
+      ...suggestion,
+      id: Array.from(crypto.getRandomValues(new Uint32Array(4)), (n) =>
+        n.toString(16).padStart(8, "0"),
+      ).join(""),
+    }));
+    setDraft((current) => {
+      const next = { ...current, comments: [...current.comments, ...added] };
+      writeDraft(pr, demo, next);
+      return next;
+    });
+    setNotice(
+      `Added ${added.length} suggestion ${added.length === 1 ? "draft" : "drafts"} to your review.`,
+    );
   }
   async function submitReview() {
     if (!pr || demo || pr.state !== "open")
@@ -717,6 +812,9 @@ export function App() {
                 onMethod={setMethod}
                 onSelect={selectSymbol}
                 onNavigate={navigate}
+                onSuggest={suggestAction}
+                annotations={annotations}
+                onClearAnnotations={() => setAnnotations(undefined)}
                 onCapabilities={navigationCapabilities}
                 onSource={openSource}
                 onLoadContent={loadContent}

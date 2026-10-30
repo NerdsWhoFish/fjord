@@ -37,6 +37,7 @@ type Navigation interface {
 	Prepare(context.Context, string, string, string, io.Reader) (string, error)
 	Capabilities(context.Context, string, string) (navigation.Capabilities, error)
 	Query(context.Context, string, string, string, int, int) (navigation.Result, error)
+	Inspect(context.Context, string, string, string, int, int, navigation.QueryOptions) (navigation.Result, error)
 	File(context.Context, string, string) (string, error)
 }
 type Config struct {
@@ -255,16 +256,17 @@ func (s *Server) file(w http.ResponseWriter, r *http.Request) error {
 }
 func (s *Server) navigate(w http.ResponseWriter, r *http.Request) error {
 	var in struct {
-		ID        string `json:"id"`
-		Path      string `json:"path"`
-		Method    string `json:"method"`
-		Line      int    `json:"line"`
-		Character int    `json:"character"`
+		ID        string                  `json:"id"`
+		Path      string                  `json:"path"`
+		Method    string                  `json:"method"`
+		Line      int                     `json:"line"`
+		Character int                     `json:"character"`
+		Options   navigation.QueryOptions `json:"options"`
 	}
 	if err := decode(r, &in); err != nil {
 		return err
 	}
-	result, err := s.config.Navigation.Query(r.Context(), in.ID, in.Path, in.Method, in.Line, in.Character)
+	result, err := s.config.Navigation.Inspect(r.Context(), in.ID, in.Path, in.Method, in.Line, in.Character, in.Options)
 	if err != nil {
 		return err
 	}

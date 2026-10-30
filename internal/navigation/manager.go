@@ -54,9 +54,14 @@ type Location struct {
 }
 
 type Result struct {
-	Locations []Location `json:"locations"`
-	Hover     string     `json:"hover"`
-	Message   string     `json:"message,omitempty"`
+	Locations  []Location          `json:"locations"`
+	Hover      string              `json:"hover"`
+	Message    string              `json:"message,omitempty"`
+	Items      []ReviewItem        `json:"items,omitempty"`
+	Highlights []DocumentHighlight `json:"highlights,omitempty"`
+	Hints      []InlayHint         `json:"hints,omitempty"`
+	Actions    []ReviewAction      `json:"actions,omitempty"`
+	Edits      []TextEdit          `json:"edits,omitempty"`
 }
 
 type workspace struct {
@@ -140,7 +145,7 @@ func (m *Manager) Capabilities(ctx context.Context, id, name string) (out Capabi
 	if err := w.ensureServer(ctx, route); err != nil {
 		return out, err
 	}
-	for _, method := range []string{"definition", "implementation", "references", "hover"} {
+	for _, method := range reviewMethods {
 		if w.capabilities[method] {
 			out.Methods = append(out.Methods, method)
 		}
@@ -282,13 +287,19 @@ func (m *Manager) File(ctx context.Context, id, name string) (string, error) {
 }
 
 func (m *Manager) Query(ctx context.Context, id, name, method string, line, character int) (out Result, resultErr error) {
+	return m.Inspect(ctx, id, name, method, line, character, QueryOptions{})
+}
+
+func (m *Manager) Inspect(ctx context.Context, id, name, method string, line, character int, options QueryOptions) (out Result, resultErr error) {
 	if m.profileErr != nil {
 		return out, m.profileErr
 	}
-	allowed := map[string]string{"definition": "textDocument/definition", "implementation": "textDocument/implementation", "references": "textDocument/references", "hover": "textDocument/hover"}
-	lspMethod, ok := allowed[method]
+	_, ok := methodProviders[method]
 	if !ok {
 		return Result{}, errors.New("unsupported navigation method")
+	}
+	if err := validateQueryOptions(method, options); err != nil {
+		return Result{}, err
 	}
 	ctx, span := otel.Tracer("fjord/navigation").Start(ctx, "navigation."+method)
 	defer func() {
@@ -327,22 +338,20 @@ func (m *Manager) Query(ctx context.Context, id, name, method string, line, char
 	stopCancellation := context.AfterFunc(ctx, w.client.close)
 	defer stopCancellation()
 	uri := (&url.URL{Scheme: "file", Path: filepath.Join(w.root, filepath.FromSlash(name))}).String()
-	if !w.opened[name] {
+	freshDiagnostics := w.client.watchDiagnostics(uri)
+	if !w.opened[name] || freshDiagnostics {
+		if w.opened[name] {
+			if err := w.client.notify("textDocument/didClose", map[string]any{"textDocument": map[string]string{"uri": uri}}); err != nil {
+				return Result{}, err
+			}
+		}
 		if err := w.client.notify("textDocument/didOpen", map[string]any{"textDocument": map[string]any{"uri": uri, "languageId": route.languageID, "version": 1, "text": content}}); err != nil {
 			return Result{}, err
 		}
 		w.opened[name] = true
 	}
-	params := map[string]any{"textDocument": map[string]string{"uri": uri}, "position": map[string]int{"line": line, "character": character}}
-	if method == "references" {
-		params["context"] = map[string]bool{"includeDeclaration": true}
-	}
-	var raw jsonResult
-	if err := w.client.call(ctx, lspMethod, params, &raw); err != nil {
-		return Result{}, err
-	}
-	result, err := decodeResult(w.root, method, raw)
-	if err == nil && len(result.Locations) == 0 && result.Hover == "" {
+	result, err := w.inspect(ctx, name, uri, content, method, line, character, options)
+	if err == nil && len(result.Locations) == 0 && result.Hover == "" && len(result.Items) == 0 && len(result.Highlights) == 0 && len(result.Hints) == 0 && len(result.Actions) == 0 && len(result.Edits) == 0 && result.Message == "" {
 		result.Message = "No " + method + " result for this position."
 		if route.language == "terraform" {
 			result.Message += " Provider schemas and remote modules are unavailable in this isolated review; local variables, locals, and local module code can be navigated."

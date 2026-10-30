@@ -54,6 +54,9 @@ func (fakeNavigation) Prepare(context.Context, string, string, string, io.Reader
 func (fakeNavigation) Query(context.Context, string, string, string, int, int) (navigation.Result, error) {
 	return navigation.Result{}, nil
 }
+func (fakeNavigation) Inspect(_ context.Context, _, _, method string, _, _ int, options navigation.QueryOptions) (navigation.Result, error) {
+	return navigation.Result{Message: method + ":" + options.Query + ":" + options.NewName}, nil
+}
 func (fakeNavigation) File(context.Context, string, string) (string, error) { return "", nil }
 func testServer() (http.Handler, *fakeGitHub) {
 	g := &fakeGitHub{}
@@ -181,5 +184,18 @@ func TestNavigationCapabilitiesEndpoint(t *testing.T) {
 	w = request(h, endpoint, `{}`, "127.0.0.1:4727", "http://evil.example", "application/json")
 	if w.Code != http.StatusForbidden {
 		t.Fatal("capabilities accepted an untrusted origin")
+	}
+}
+
+func TestNavigationInspectionOptions(t *testing.T) {
+	h, _ := testServer()
+	w := request(h, "/api/navigate", `{"id":"workspace","path":"main.go","method":"rename","line":1,"character":2,"options":{"newName":"Renamed"}}`, "127.0.0.1:4727", "http://127.0.0.1:4727", "application/json")
+	var result navigation.Result
+	if w.Code != http.StatusOK || json.Unmarshal(w.Body.Bytes(), &result) != nil || result.Message != "rename::Renamed" {
+		t.Fatalf("inspection options lost: %d %s", w.Code, w.Body)
+	}
+	w = request(h, "/api/navigate", `{"options":{"command":"execute"}}`, "127.0.0.1:4727", "http://127.0.0.1:4727", "application/json")
+	if w.Code != http.StatusBadRequest {
+		t.Fatal("accepted executable navigation options")
 	}
 }

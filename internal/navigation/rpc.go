@@ -29,16 +29,19 @@ type rpcError struct {
 }
 
 type rpcClient struct {
-	reader   io.ReadCloser
-	writer   io.WriteCloser
-	writeMu  sync.Mutex
-	mu       sync.Mutex
-	next     int64
-	pending  map[int64]chan rpcMessage
-	done     chan struct{}
-	once     sync.Once
-	stop     func()
-	settings map[string]any
+	reader               io.ReadCloser
+	writer               io.WriteCloser
+	writeMu              sync.Mutex
+	mu                   sync.Mutex
+	next                 int64
+	pending              map[int64]chan rpcMessage
+	done                 chan struct{}
+	once                 sync.Once
+	stop                 func()
+	settings             map[string]any
+	diagnostics          map[string]*diagnosticPublication
+	diagnosticOrder      []string
+	diagnosticIdentifier string
 }
 
 func newRPC(reader io.ReadCloser, writer io.WriteCloser, stop func()) *rpcClient {
@@ -46,7 +49,7 @@ func newRPC(reader io.ReadCloser, writer io.WriteCloser, stop func()) *rpcClient
 }
 
 func newRPCWithSettings(reader io.ReadCloser, writer io.WriteCloser, stop func(), settings map[string]any) *rpcClient {
-	c := &rpcClient{reader: reader, writer: writer, pending: make(map[int64]chan rpcMessage), done: make(chan struct{}), stop: stop, settings: settings}
+	c := &rpcClient{reader: reader, writer: writer, pending: make(map[int64]chan rpcMessage), done: make(chan struct{}), stop: stop, settings: settings, diagnostics: make(map[string]*diagnosticPublication)}
 	go c.readLoop()
 	return c
 }
@@ -121,7 +124,7 @@ func (c *rpcClient) call(ctx context.Context, method string, params, result any)
 		return errors.New("language server stopped; check the selected language server and platform sandbox")
 	case message := <-ch:
 		if message.Error != nil {
-			return fmt.Errorf("language server rejected navigation (code %d); dependencies may be unavailable in the isolated workspace", message.Error.Code)
+			return fmt.Errorf("language server rejected this action (code %d); it may not apply to the selected symbol or its dependencies may be unavailable", message.Error.Code)
 		}
 		if result == nil {
 			return nil
@@ -144,6 +147,8 @@ func (c *rpcClient) readLoop() {
 		if message.Method != "" {
 			if len(message.ID) > 0 {
 				c.answer(message)
+			} else if message.Method == "textDocument/publishDiagnostics" {
+				c.publishDiagnostics(message.Params)
 			}
 			continue
 		}

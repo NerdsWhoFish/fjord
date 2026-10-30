@@ -26,9 +26,46 @@
 }
 .file-review-controls {
   display: flex;
-  flex-shrink: 0;
+  flex-shrink: 1;
+  flex-wrap: wrap;
   align-items: center;
   gap: 12px;
+}
+.source-review-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.stream-file .panel-heading,
+.shared-source .panel-heading {
+  flex-wrap: wrap;
+}
+.file-review-controls > button,
+.source-review-controls > button:not(.icon-button) {
+  font-size: 11px;
+  padding: 6px 8px;
+}
+.code-inlay-hint {
+  display: inline;
+  user-select: none;
+  pointer-events: none;
+  padding: 1px 3px;
+  margin: 0 2px;
+  border-radius: 3px;
+  background: var(--surface-selected);
+  color: var(--muted);
+  font-size: 10px;
+}
+.code-document-highlight {
+  background: var(--target-background);
+  color: inherit;
+  font: inherit;
+  border-radius: 2px;
+  box-shadow: inset 0 -1px var(--target-border);
+}
+.code-document-highlight.highlight-write {
+  box-shadow: inset 0 -2px var(--target-border);
 }
 .file-review-controls .viewed-control {
   margin: 0;

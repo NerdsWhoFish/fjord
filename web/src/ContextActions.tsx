@@ -1,10 +1,19 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  useEffect,
+  useId,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { createPortal } from "react-dom";
 import { commentLineLabel } from "./comment-range";
 import type {
   CodeLocation,
   Method,
   NavigationResult,
+  QueryOptions,
+  ReviewAction,
   Selection,
 } from "./types";
 import { watchCapabilities } from "./navigation-capabilities";
@@ -12,6 +21,8 @@ import type {
   CapabilityLoader,
   CapabilityState,
 } from "./navigation-capabilities";
+import { availableActions, methodLabels as labels } from "./feature-methods";
+import { FeatureResults } from "./FeatureResults";
 
 export interface ActionAnchor {
   element: HTMLElement;
@@ -19,14 +30,8 @@ export interface ActionAnchor {
   commentable: boolean;
   activated: boolean;
   pinned?: boolean;
+  scope?: "file" | "symbol";
 }
-
-const labels: Record<Method, string> = {
-  definition: "Definition",
-  implementation: "Implementation",
-  references: "References",
-  hover: "Type information",
-};
 
 interface Props {
   anchor: ActionAnchor;
@@ -37,7 +42,10 @@ interface Props {
   onNavigate: (
     selection: Selection,
     method: Method,
+    options?: QueryOptions,
   ) => Promise<NavigationResult | undefined>;
+  onSuggest: (action: ReviewAction, selection: Selection) => Promise<void>;
+  onClearAnnotations: () => void;
   onLocation: (location: CodeLocation) => void;
   onCapabilities: CapabilityLoader;
   onComment: (selection: Selection) => void;
@@ -51,6 +59,8 @@ export function ContextActions({
   onEnter,
   onLeave,
   onNavigate,
+  onSuggest,
+  onClearAnnotations,
   onLocation,
   onCapabilities,
   onComment,
@@ -62,13 +72,13 @@ export function ContextActions({
   const navigationEpoch = useRef(0);
   const currentSelection = useRef(selection);
   currentSelection.current = selection;
-  const focusTarget = useRef<"back" | "go-to" | Method | undefined>(undefined);
-  const [goToSelection, setGoToSelection] = useState<Selection>();
-  const goToOpen = goToSelection === selection;
+  const focusTarget = useRef<"back" | "query" | Method | undefined>(undefined);
+  const queryID = useId();
+  const [queryValue, setQueryValue] = useState("");
   const [navigation, setNavigation] = useState<{
     selection: Selection;
     method: Method;
-    status: "loading" | "ready" | "error";
+    status: "query" | "loading" | "ready" | "error";
     result?: NavigationResult;
     error?: string;
   }>();
@@ -81,13 +91,13 @@ export function ContextActions({
     [selection],
   );
 
-  async function navigate(method: Method) {
+  async function navigate(method: Method, options?: QueryOptions) {
     const epoch = ++navigationEpoch.current;
     onEnter();
     focusTarget.current = "back";
     setNavigation({ selection, method, status: "loading" });
     try {
-      const next = await onNavigate(selection, method);
+      const next = await onNavigate(selection, method, options);
       if (
         navigationEpoch.current !== epoch ||
         currentSelection.current !== selection
@@ -121,6 +131,15 @@ export function ContextActions({
     }
   }
 
+  function chooseMethod(method: Method) {
+    if (method === "workspaceSymbols" || method === "rename") {
+      onEnter();
+      setQueryValue(method === "rename" ? selection.word : "");
+      focusTarget.current = "query";
+      setNavigation({ selection, method, status: "query" });
+    } else void navigate(method);
+  }
+
   function backToActions() {
     navigationEpoch.current++;
     focusTarget.current = activeNavigation?.method;
@@ -131,7 +150,7 @@ export function ContextActions({
     const target = focusTarget.current;
     if (!target) return;
     const button =
-      panel.current?.querySelector<HTMLButtonElement>(
+      panel.current?.querySelector<HTMLElement>(
         `[data-navigation-focus="${target}"]:not(:disabled)`,
       ) ||
       panel.current?.querySelector<HTMLButtonElement>(
@@ -139,7 +158,7 @@ export function ContextActions({
       );
     button?.focus({ preventScroll: true });
     focusTarget.current = undefined;
-  }, [activeNavigation, goToOpen]);
+  }, [activeNavigation]);
   const [attempt, setAttempt] = useState(0);
   const request = useMemo(
     () => ({ selection, load: onCapabilities, attempt }),
@@ -154,7 +173,10 @@ export function ContextActions({
     result?.request === request ? result.state : { status: "loading" };
   const methods =
     selection.word && capabilityState.status === "ready"
-      ? capabilityState.capabilities.methods
+      ? availableActions(
+          capabilityState.capabilities.methods,
+          anchor.scope === "file",
+        )
       : [];
   useEffect(
     () =>
@@ -211,26 +233,29 @@ export function ContextActions({
       });
     }
     place();
+    const observer =
+      typeof ResizeObserver === "undefined"
+        ? undefined
+        : new ResizeObserver(place);
+    if (panel.current) observer?.observe(panel.current);
     window.addEventListener("resize", place);
     window.addEventListener("scroll", place, true);
     return () => {
+      observer?.disconnect();
       window.removeEventListener("resize", place);
       window.removeEventListener("scroll", place, true);
     };
-  }, [
-    anchor.element,
-    anchor.selection,
-    onClose,
-    result,
-    activeNavigation,
-    goToOpen,
-  ]);
+  }, [anchor.element, anchor.selection, onClose, result, activeNavigation]);
 
   useEffect(() => {
-    if (anchor.activated)
-      panel.current
-        ?.querySelector<HTMLButtonElement>(":scope > button:not(:disabled)")
-        ?.focus({ preventScroll: true });
+    if (anchor.activated) {
+      const first =
+        panel.current?.querySelector<HTMLButtonElement>(
+          ":scope > button:not(:disabled)",
+        ) ||
+        panel.current?.querySelector<HTMLButtonElement>(".context-dismiss");
+      first?.focus({ preventScroll: true });
+    }
   }, [anchor]);
 
   useEffect(() => {
@@ -258,7 +283,7 @@ export function ContextActions({
   return createPortal(
     <div
       ref={panel}
-      className="code-context-actions"
+      className={`code-context-actions ${activeNavigation ? "with-feature-results" : ""}`}
       role="dialog"
       aria-label={
         selection.word
@@ -311,7 +336,7 @@ export function ContextActions({
             onClick={backToActions}
           >
             <span aria-hidden="true">&larr;</span>
-            <span>{goToOpen ? "Back to navigation" : "Back to actions"}</span>
+            <span>Back to actions</span>
           </button>
           <div
             className="context-navigation"
@@ -322,13 +347,48 @@ export function ContextActions({
             <p className="context-result-title">
               {labels[activeNavigation.method]}
             </p>
+            {activeNavigation.status === "query" && (
+              <form
+                className="context-query"
+                onSubmit={(event) => {
+                  event.preventDefault();
+                  if (!queryValue.trim()) return;
+                  void navigate(
+                    activeNavigation.method,
+                    activeNavigation.method === "rename"
+                      ? { newName: queryValue.trim() }
+                      : { query: queryValue.trim() },
+                  );
+                }}
+              >
+                <label htmlFor={queryID}>
+                  {activeNavigation.method === "rename"
+                    ? "New symbol name"
+                    : "Search workspace symbols"}
+                </label>
+                <input
+                  id={queryID}
+                  data-navigation-focus="query"
+                  value={queryValue}
+                  onChange={(event) => setQueryValue(event.target.value)}
+                  autoComplete="off"
+                  spellCheck={false}
+                />
+                {activeNavigation.method === "rename" && (
+                  <p className="context-support-note">
+                    Preview affected code without applying changes.
+                  </p>
+                )}
+                <button type="submit" disabled={!queryValue.trim()}>
+                  {activeNavigation.method === "rename"
+                    ? "Preview rename"
+                    : "Search symbols"}
+                </button>
+              </form>
+            )}
             {activeNavigation.status === "loading" && (
               <p className="context-support-note" role="status">
-                Loading{" "}
-                {activeNavigation.method === "hover"
-                  ? "type information"
-                  : "destinations"}
-                ...
+                Loading results...
               </p>
             )}
             {activeNavigation.status === "error" && (
@@ -336,106 +396,35 @@ export function ContextActions({
                 {activeNavigation.error}
               </p>
             )}
-            {activeNavigation.status === "ready" && (
-              <>
-                {!!activeNavigation.result?.hover && (
-                  <pre className="context-hover-result">
-                    {activeNavigation.result.hover}
-                  </pre>
-                )}
-                {!!activeNavigation.result?.locations?.length && (
-                  <>
-                    <p className="context-support-note" role="status">
-                      {activeNavigation.result.locations.length}{" "}
-                      {activeNavigation.method === "references"
-                        ? activeNavigation.result.locations.length === 1
-                          ? "reference"
-                          : "references"
-                        : activeNavigation.result.locations.length === 1
-                          ? "destination"
-                          : "destinations"}
-                    </p>
-                    <div
-                      className="context-destinations"
-                      role="group"
-                      aria-label="Navigation destinations"
-                    >
-                      {activeNavigation.result.locations.map(
-                        (location, index) => (
-                          <button
-                            type="button"
-                            key={`${location.path}:${location.line}:${location.character}:${index}`}
-                            onClick={() => {
-                              onClose();
-                              onLocation(location);
-                            }}
-                          >
-                            <span>
-                              {location.path}:{location.line + 1}
-                            </span>
-                            <span aria-hidden="true">&rarr;</span>
-                          </button>
-                        ),
-                      )}
-                    </div>
-                  </>
-                )}
-                {!activeNavigation.result?.hover &&
-                  !activeNavigation.result?.locations?.length && (
-                    <p className="context-support-note" role="status">
-                      {activeNavigation.result?.message ||
-                        "No results for this symbol."}
-                    </p>
-                  )}
-              </>
+            {activeNavigation.status === "ready" && activeNavigation.result && (
+              <FeatureResults
+                result={activeNavigation.result}
+                method={activeNavigation.method}
+                selection={selection}
+                onLocation={(location) => {
+                  onClose();
+                  onLocation(location);
+                }}
+                onSuggest={onSuggest}
+                onClearAnnotations={onClearAnnotations}
+              />
             )}
           </div>
         </>
       ) : (
         <>
-          {goToOpen ? (
+          {methods.map((method) => (
             <button
+              key={method}
               type="button"
-              onClick={() => {
-                focusTarget.current = "go-to";
-                setGoToSelection(undefined);
-              }}
+              disabled={busy}
+              data-navigation-focus={method}
+              onClick={() => chooseMethod(method)}
             >
-              <span aria-hidden="true">&larr;</span>
-              <span>Back to actions</span>
-            </button>
-          ) : methods.some((method) => method !== "hover") ? (
-            <button
-              type="button"
-              data-navigation-focus="go-to"
-              onClick={() => {
-                onEnter();
-                focusTarget.current = methods.find(
-                  (method) => method !== "hover",
-                );
-                setGoToSelection(selection);
-              }}
-            >
-              <span>Go to</span>
+              <span>{labels[method]}</span>
               <span aria-hidden="true">&rarr;</span>
             </button>
-          ) : null}
-          {methods
-            .filter((method) =>
-              goToOpen ? method !== "hover" : method === "hover",
-            )
-            .map((method) => (
-              <button
-                key={method}
-                type="button"
-                disabled={busy}
-                data-navigation-focus={method}
-                onClick={() => void navigate(method)}
-              >
-                <span>{labels[method]}</span>
-                <span aria-hidden="true">&rarr;</span>
-              </button>
-            ))}
+          ))}
           {selection.word && capabilityState.status === "loading" && (
             <p className="context-support-note" role="status">
               Loading code navigation...
@@ -475,7 +464,7 @@ export function ContextActions({
             : "Comment on this line"}
         </button>
       )}
-      {selection.word && (
+      {selection.word && anchor.scope !== "file" && (
         <button type="button" onClick={() => onAsk(selection)}>
           Ask AI about selection
         </button>

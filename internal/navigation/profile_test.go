@@ -53,7 +53,7 @@ func TestGenericProfileCapabilitiesAndSettings(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if caps.Server != p.Name || caps.LanguageID != p.LanguageID || !reflect.DeepEqual(caps.Methods, []string{"definition", "hover"}) {
+	if caps.Server != p.Name || caps.LanguageID != p.LanguageID || !reflect.DeepEqual(caps.Methods, []string{"definition", "hover", "diagnostics"}) {
 		t.Fatalf("%+v", caps)
 	}
 	client := m.workspaces[id].client

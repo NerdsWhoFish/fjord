@@ -52,7 +52,7 @@ func TestDefaultProfilesMatchExistingLanguages(t *testing.T) {
 	if !goProfile.RootRequired || !reflect.DeepEqual(goProfile.RootMarkers, []string{"go.mod"}) || goProfile.Adapter != "go" {
 		t.Fatalf("lost Go preflight: %+v", goProfile)
 	}
-	if !reflect.DeepEqual(goProfile.InitializationOptions, map[string]any{"staticcheck": false, "checkBugReports": false, "telemetryPrompt": false}) {
+	if !reflect.DeepEqual(goProfile.InitializationOptions, map[string]any{"staticcheck": false, "checkBugReports": false, "telemetryPrompt": false, "hints": map[string]any{"parameterNames": true, "assignVariableTypes": true, "rangeVariableTypes": true}}) {
 		t.Fatal("lost safe Go initialization defaults")
 	}
 	for _, profile := range profiles[1:] {

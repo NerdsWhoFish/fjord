@@ -64,9 +64,18 @@ func startProfileServer(ctx context.Context, dir, root string, profile lspconfig
 		"processId": nil, "rootUri": uri,
 		"workspaceFolders": []map[string]string{{"uri": uri, "name": "revision"}},
 		"capabilities": map[string]any{
-			"general":      map[string]any{"positionEncodings": []string{"utf-16"}},
-			"workspace":    map[string]any{"configuration": true, "workspaceFolders": true},
-			"textDocument": map[string]any{"hover": map[string]any{"contentFormat": []string{"plaintext"}}},
+			"general":   map[string]any{"positionEncodings": []string{"utf-16"}},
+			"workspace": map[string]any{"configuration": true, "workspaceFolders": true},
+			"textDocument": map[string]any{
+				"hover":              map[string]any{"contentFormat": []string{"plaintext"}},
+				"publishDiagnostics": map[string]any{"versionSupport": true, "relatedInformation": false},
+				"diagnostic":         map[string]any{"dynamicRegistration": false},
+				"documentSymbol":     map[string]any{"hierarchicalDocumentSymbolSupport": true},
+				"callHierarchy":      map[string]any{"dynamicRegistration": false},
+				"typeHierarchy":      map[string]any{"dynamicRegistration": false},
+				"inlayHint":          map[string]any{"dynamicRegistration": false},
+				"codeAction":         map[string]any{"disabledSupport": true, "dataSupport": true, "resolveSupport": map[string]any{"properties": []string{"edit"}}, "codeActionLiteralSupport": map[string]any{"codeActionKind": map[string]any{"valueSet": []string{"", "quickfix", "refactor", "refactor.extract", "refactor.inline", "refactor.rewrite", "source", "source.organizeImports", "source.fixAll"}}}},
+			},
 		},
 		"initializationOptions": config.options,
 	}, &initialized)
@@ -92,10 +101,25 @@ func startProfileServer(ctx context.Context, dir, root string, profile lspconfig
 		}
 	}
 	capabilities := make(map[string]bool)
-	for _, method := range []string{"definition", "implementation", "references", "hover"} {
-		value := bytes.TrimSpace(initialized.Capabilities[method+"Provider"])
+	for method, provider := range methodProviders {
+		value := bytes.TrimSpace(initialized.Capabilities[provider])
 		capabilities[method] = bytes.Equal(value, []byte("true")) || (len(value) > 0 && value[0] == '{')
 	}
+	capabilities["pullDiagnostics"] = capabilities["diagnostics"]
+	var diagnostics struct {
+		Identifier string `json:"identifier"`
+	}
+	_ = json.Unmarshal(initialized.Capabilities["diagnosticProvider"], &diagnostics)
+	if len(diagnostics.Identifier) <= 256 {
+		client.diagnosticIdentifier = diagnostics.Identifier
+	}
+	// Push diagnostics have no provider flag; silence must not imply clean code.
+	capabilities["diagnostics"] = true
+	var codeActions struct {
+		ResolveProvider bool `json:"resolveProvider"`
+	}
+	_ = json.Unmarshal(initialized.Capabilities["codeActionProvider"], &codeActions)
+	capabilities["resolveCodeAction"] = codeActions.ResolveProvider
 	return client, capabilities, nil
 }
 
