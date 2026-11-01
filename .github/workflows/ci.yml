@@ -26,9 +26,7 @@ jobs:
           cache: npm
           cache-dependency-path: web/package-lock.json
       - name: Install language servers
-        run: |
-          go install golang.org/x/tools/gopls@v0.24.0
-          go install github.com/opentofu/tofu-ls@v0.5.3
+        run: sh scripts/install-language-servers.sh
       - name: Install Linux sandbox
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y bubblewrap

@@ -12,8 +12,8 @@ WORKDIR /src
 ENV GOWORK=off
 COPY go.mod go.sum ./
 RUN go mod download
-RUN GOBIN=/out go install golang.org/x/tools/gopls@v0.24.0 \
-    && GOBIN=/out go install github.com/opentofu/tofu-ls@v0.5.3
+COPY scripts/install-language-servers.sh ./scripts/install-language-servers.sh
+RUN GOBIN=/out sh scripts/install-language-servers.sh
 COPY . .
 COPY --from=web /src/web/dist ./web/dist
 ARG APP_VERSION
