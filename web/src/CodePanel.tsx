@@ -33,6 +33,8 @@ import type {
   Selection,
   Side,
   SourceView,
+  ThreadComment,
+  DraftComment,
 } from "./types";
 import { sourceWindow } from "./window";
 import { buildDiffContext } from "./diff-context";
@@ -44,8 +46,19 @@ import type { CommentRange } from "./comment-range";
 import { useCommentRange } from "./useCommentRange";
 import "./code-actions.css";
 import "./review-flow.css";
+import { diffLayout, reviewThreads } from "./diff-layout";
+import {
+  InlineDraftComments,
+  InlineReviewThreads,
+} from "./InlineReviewThreads";
+import "./diff-layout.css";
 
 interface Props {
+  diffMode?: "unified" | "split";
+  threads?: ThreadComment[];
+  onReply?: (commentId: number, body: string) => Promise<void>;
+  drafts?: DraftComment[];
+  onReviewDrafts?: () => void;
   pr: PullRequest;
   file: ChangedFile;
   scrollTarget: { path: string };
@@ -409,6 +422,11 @@ function DeferredFile({
 }
 
 function FileCodePanel({
+  diffMode = "unified",
+  threads = [],
+  onReply,
+  drafts = [],
+  onReviewDrafts,
   pr,
   file,
   source,
@@ -508,6 +526,20 @@ function FileCodePanel({
   const contextRows = useMemo(
     () => buildDiffContext(lines, contextContent, expanded),
     [lines, contextContent, expanded],
+  );
+  const split = diffMode === "split";
+  const layout = useMemo(
+    () => diffLayout(contextRows, split),
+    [contextRows, split],
+  );
+  const fileThreads = useMemo(
+    () =>
+      reviewThreads(threads).filter(
+        ({ root }) =>
+          root.path === file.path ||
+          (root.side === "LEFT" && root.path === file.previousPath),
+      ),
+    [threads, file.path, file.previousPath],
   );
   const loadContext = useCallback(() => {
     if (contextRequest.current) return contextRequest.current;
@@ -865,172 +897,245 @@ function FileCodePanel({
             aria-label={`Diff for ${file.path}`}
           >
             {lines.length ? (
-              <div className="code-table">
-                {contextRows.map((row, renderedIndex) => {
-                  if (row.kind === "gap")
-                    return (
-                      <div className="diff-context-gap" key={row.key}>
-                        <button
-                          type="button"
-                          disabled={!!expanding}
-                          onClick={() => void expandContext(row.key)}
+              <div className={`code-table ${split ? "split-diff" : ""}`}>
+                {split && (
+                  <>
+                    <div className="split-diff-label">Base</div>
+                    <div className="split-diff-label">Head</div>
+                  </>
+                )}
+                {layout.map(
+                  ({ row, index: renderedIndex, side: cellSide, track }) => {
+                    const placement = split
+                      ? {
+                          gridRow: track + 1,
+                          gridColumn:
+                            cellSide === "LEFT"
+                              ? "1"
+                              : cellSide === "RIGHT"
+                                ? "2"
+                                : "1 / -1",
+                        }
+                      : undefined;
+                    if (row.kind === "gap")
+                      return (
+                        <div
+                          className="diff-context-gap"
+                          key={row.key}
+                          style={placement}
                         >
-                          <svg
-                            className="context-direction"
-                            aria-hidden="true"
-                            viewBox="0 0 16 16"
-                            width="16"
-                            height="16"
-                            fill="none"
-                            stroke="currentColor"
-                            strokeWidth="1.5"
+                          <button
+                            type="button"
+                            disabled={!!expanding}
+                            onClick={() => void expandContext(row.key)}
                           >
-                            <path d="M8 2v12" />
-                            {row.key.startsWith("before:") ||
-                            row.key.startsWith("between:") ? (
-                              <path d="m4 6 4-4 4 4" />
-                            ) : null}
-                            {row.key.startsWith("after:") ||
-                            row.key.startsWith("between:") ? (
-                              <path d="m4 10 4 4 4-4" />
-                            ) : null}
-                          </svg>
-                          {expanding === row.key
-                            ? "Loading context..."
-                            : row.label}
-                        </button>
+                            <svg
+                              className="context-direction"
+                              aria-hidden="true"
+                              viewBox="0 0 16 16"
+                              width="16"
+                              height="16"
+                              fill="none"
+                              stroke="currentColor"
+                              strokeWidth="1.5"
+                            >
+                              <path d="M8 2v12" />
+                              {row.key.startsWith("before:") ||
+                              row.key.startsWith("between:") ? (
+                                <path d="m4 6 4-4 4 4" />
+                              ) : null}
+                              {row.key.startsWith("after:") ||
+                              row.key.startsWith("between:") ? (
+                                <path d="m4 10 4 4 4-4" />
+                              ) : null}
+                            </svg>
+                            {expanding === row.key
+                              ? "Loading context..."
+                              : row.label}
+                          </button>
+                        </div>
+                      );
+                    const { line } = row;
+                    const original = row.kind === "original";
+                    const rowIndex = original ? row.index : undefined;
+                    const position = cellSide
+                      ? {
+                          side: cellSide,
+                          line:
+                            (cellSide === "LEFT"
+                              ? line.oldLine
+                              : line.newLine) ?? 1,
+                        }
+                      : linePosition(line);
+                    const points =
+                      rowIndex !== undefined ? indexed[rowIndex] : {};
+                    const selectionFor = (
+                      word: string,
+                      character: number,
+                    ): Selection => ({
+                      path:
+                        position?.side === "LEFT"
+                          ? file.previousPath || file.path
+                          : file.path,
+                      line: position?.line || 1,
+                      side: position?.side || "RIGHT",
+                      character,
+                      word,
+                      code: line.text,
+                      sha: position?.side === "LEFT" ? pr.baseSHA : pr.headSHA,
+                    });
+                    const diagnosticLine =
+                      cellSide && cellSide !== diagnosticSelection.side
+                        ? 0
+                        : ((diagnosticSelection.side === "LEFT"
+                            ? line.oldLine
+                            : line.newLine) ?? 0);
+                    const rowDiagnostics =
+                      diagnosticLine > 0
+                        ? diagnosticsForLine(
+                            diagnosticItems,
+                            diagnosticSelection.path,
+                            diagnosticLine - 1,
+                          )
+                        : [];
+                    return (
+                      <div
+                        className={`diff-entry ${!cellSide ? "diff-full-row" : ""}`}
+                        data-diff-side={cellSide}
+                        style={placement}
+                        key={`${original ? `original-${rowIndex}` : row.key}-${cellSide || "unified"}`}
+                      >
+                        <div
+                          className={`code-row ${line.kind} ${!original ? "expanded-context" : ""} ${(cellSide ? range.selected(points[cellSide]) : range.selected(points.LEFT) || range.selected(points.RIGHT)) ? "comment-range-selected" : ""}`}
+                          data-comment-row={rowIndex}
+                        >
+                          {(cellSide
+                            ? [cellSide]
+                            : (["LEFT", "RIGHT"] as const)
+                          ).map((side) => {
+                            const point = points[side];
+                            return point ? (
+                              <button
+                                key={side}
+                                type="button"
+                                className="line-number line-select"
+                                data-comment-side={side}
+                                title={`${side === "LEFT" ? "Base" : "Head"} line ${point.line}. Drag or Shift-click to select a range.`}
+                                aria-label={`Select ${side === "LEFT" ? "base" : "head"} line ${point.line} for a comment`}
+                                aria-pressed={range.selected(point)}
+                                {...range.handlers(point)}
+                              >
+                                {point.line}
+                              </button>
+                            ) : (
+                              <span className="line-number" key={side}>
+                                {!original
+                                  ? side === "LEFT"
+                                    ? line.oldLine
+                                    : line.newLine
+                                  : ""}
+                              </span>
+                            );
+                          })}
+                          <span className="diff-marker">
+                            {rowDiagnostics.length ? (
+                              <DiagnosticMarker
+                                items={rowDiagnostics}
+                                revision={diagnosticRevision}
+                                onOpen={(element) =>
+                                  diagnosticActions(
+                                    element,
+                                    rowDiagnostics,
+                                    line.text,
+                                  )
+                                }
+                              />
+                            ) : (
+                              <span aria-hidden="true">
+                                {line.kind === "add"
+                                  ? "+"
+                                  : line.kind === "delete"
+                                    ? "-"
+                                    : ""}
+                              </span>
+                            )}
+                          </span>
+                          <code>
+                            {position ? (
+                              <Tokens
+                                code={line.text}
+                                spans={diffSyntax.lines[renderedIndex]}
+                                annotations={withDiagnostics(
+                                  annotationsForLine(
+                                    annotations,
+                                    (cellSide === "LEFT" ||
+                                      (!cellSide &&
+                                        annotations?.sha === pr.baseSHA)) &&
+                                      line.oldLine !== undefined
+                                      ? file.previousPath || file.path
+                                      : file.path,
+                                    (cellSide === "LEFT" ||
+                                      (!cellSide &&
+                                        annotations?.sha === pr.baseSHA)) &&
+                                      line.oldLine !== undefined
+                                      ? pr.baseSHA
+                                      : pr.headSHA,
+                                    ((cellSide === "LEFT" ||
+                                      (!cellSide &&
+                                        annotations?.sha === pr.baseSHA)) &&
+                                    line.oldLine !== undefined
+                                      ? line.oldLine
+                                      : (line.newLine ?? -1)) - 1,
+                                    line.text,
+                                  ),
+                                  rowDiagnostics,
+                                  diagnosticLine - 1,
+                                  line.text,
+                                )}
+                                onIntent={(element, word, column, intent) =>
+                                  symbolIntent(
+                                    element,
+                                    selectionFor(word, column),
+                                    original,
+                                    intent,
+                                  )
+                                }
+                                onLeave={leaveActions}
+                              />
+                            ) : (
+                              line.text
+                            )}
+                          </code>
+                        </div>
+                        <InlineReviewThreads
+                          threads={fileThreads.filter(
+                            ({ root }) =>
+                              (!cellSide || root.side === cellSide) &&
+                              root.line ===
+                                (root.side === "LEFT"
+                                  ? line.oldLine
+                                  : line.newLine),
+                          )}
+                          onReply={onReply}
+                        />
+                        <InlineDraftComments
+                          drafts={drafts.filter(
+                            (draft) =>
+                              (draft.path === file.path ||
+                                (draft.side === "LEFT" &&
+                                  draft.path === file.previousPath)) &&
+                              (!cellSide || draft.side === cellSide) &&
+                              draft.line ===
+                                (draft.side === "LEFT"
+                                  ? line.oldLine
+                                  : line.newLine),
+                          )}
+                          onReviewDrafts={onReviewDrafts}
+                        />
                       </div>
                     );
-                  const { line } = row;
-                  const original = row.kind === "original";
-                  const rowIndex = original ? row.index : undefined;
-                  const position = linePosition(line);
-                  const points =
-                    rowIndex !== undefined ? indexed[rowIndex] : {};
-                  const selectionFor = (
-                    word: string,
-                    character: number,
-                  ): Selection => ({
-                    path:
-                      position?.side === "LEFT"
-                        ? file.previousPath || file.path
-                        : file.path,
-                    line: position?.line || 1,
-                    side: position?.side || "RIGHT",
-                    character,
-                    word,
-                    code: line.text,
-                    sha: position?.side === "LEFT" ? pr.baseSHA : pr.headSHA,
-                  });
-                  const diagnosticLine =
-                    (diagnosticSelection.side === "LEFT"
-                      ? line.oldLine
-                      : line.newLine) ?? 0;
-                  const rowDiagnostics =
-                    diagnosticLine > 0
-                      ? diagnosticsForLine(
-                          diagnosticItems,
-                          diagnosticSelection.path,
-                          diagnosticLine - 1,
-                        )
-                      : [];
-                  return (
-                    <div
-                      className={`code-row ${line.kind} ${!original ? "expanded-context" : ""} ${range.selected(points.LEFT) || range.selected(points.RIGHT) ? "comment-range-selected" : ""}`}
-                      key={original ? `original-${rowIndex}` : row.key}
-                      data-comment-row={rowIndex}
-                    >
-                      {(["LEFT", "RIGHT"] as const).map((side) => {
-                        const point = points[side];
-                        return point ? (
-                          <button
-                            key={side}
-                            type="button"
-                            className="line-number line-select"
-                            data-comment-side={side}
-                            title={`${side === "LEFT" ? "Base" : "Head"} line ${point.line}. Drag or Shift-click to select a range.`}
-                            aria-label={`Select ${side === "LEFT" ? "base" : "head"} line ${point.line} for a comment`}
-                            aria-pressed={range.selected(point)}
-                            {...range.handlers(point)}
-                          >
-                            {point.line}
-                          </button>
-                        ) : (
-                          <span className="line-number" key={side}>
-                            {!original
-                              ? side === "LEFT"
-                                ? line.oldLine
-                                : line.newLine
-                              : ""}
-                          </span>
-                        );
-                      })}
-                      <span className="diff-marker">
-                        {rowDiagnostics.length ? (
-                          <DiagnosticMarker
-                            items={rowDiagnostics}
-                            revision={diagnosticRevision}
-                            onOpen={(element) =>
-                              diagnosticActions(
-                                element,
-                                rowDiagnostics,
-                                line.text,
-                              )
-                            }
-                          />
-                        ) : (
-                          <span aria-hidden="true">
-                            {line.kind === "add"
-                              ? "+"
-                              : line.kind === "delete"
-                                ? "-"
-                                : ""}
-                          </span>
-                        )}
-                      </span>
-                      <code>
-                        {position ? (
-                          <Tokens
-                            code={line.text}
-                            spans={diffSyntax.lines[renderedIndex]}
-                            annotations={withDiagnostics(
-                              annotationsForLine(
-                                annotations,
-                                annotations?.sha === pr.baseSHA &&
-                                  line.oldLine !== undefined
-                                  ? file.previousPath || file.path
-                                  : file.path,
-                                annotations?.sha === pr.baseSHA &&
-                                  line.oldLine !== undefined
-                                  ? pr.baseSHA
-                                  : pr.headSHA,
-                                (annotations?.sha === pr.baseSHA &&
-                                line.oldLine !== undefined
-                                  ? line.oldLine
-                                  : (line.newLine ?? -1)) - 1,
-                                line.text,
-                              ),
-                              rowDiagnostics,
-                              diagnosticLine - 1,
-                              line.text,
-                            )}
-                            onIntent={(element, word, column, intent) =>
-                              symbolIntent(
-                                element,
-                                selectionFor(word, column),
-                                original,
-                                intent,
-                              )
-                            }
-                            onLeave={leaveActions}
-                          />
-                        ) : (
-                          line.text
-                        )}
-                      </code>
-                    </div>
-                  );
-                })}
+                  },
+                )}
               </div>
             ) : (
               <div className="empty-message">

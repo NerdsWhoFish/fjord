@@ -35,6 +35,16 @@
 .settings-menu:not([open]) .settings-panel {
   display: none;
 }
+.diff-mode-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.diff-mode-setting select {
+  min-width: 0;
+  width: auto;
+}
 @media (max-width: 700px) {
   .header-actions .settings-panel {
     left: 0;

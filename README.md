@@ -62,7 +62,9 @@ Make targets disable inherited Go workspaces.
 - Read code at exact revisions. Deleted lines use the merge base; renamed files use their previous path on the left side.
 - Follow symbols using contextual definition, reference, and type-information actions in isolated revision workspaces. Go also supports implementation navigation.
 - Draft single-line or multiline comments and explicitly submit a comment review, approval, or request for changes. Submission checks the head and merge-base SHAs and pins GitHub's `commit_id` to the reviewed head.
-- Read inline review comments and reply to them.
+- Read regular PR conversation and submitted review decisions in the review dialog.
+- Read line-level review threads directly beside their code and reply inline.
+- Choose unified or split diffs in Settings; the preference persists across refreshes.
 - Connect an MCP client to inspect the open review, follow code, and propose attributed comment or suggestion drafts.
 
 GitHub can receive a push after the freshness check.
@@ -199,7 +201,10 @@ The image runs as UID 10001 and listens on `0.0.0.0:4727`; allow writable tempor
 The host kernel and container runtime must permit nested unprivileged user namespaces and Bubblewrap's required namespace operations.
 A Kubernetes cluster with user namespaces disabled cannot run this LSP isolation model unchanged.
 Fjord fails closed; do not work around that with a privileged container or by removing the sandbox.
-The container recipes have not yet been built or exercised in a container runtime; native macOS integration tests cover the language-server behavior.
+The base AMD64 image has been built and exercised on Talos Kubernetes with real gopls, tofu-ls, and sandbox isolation tests.
+That deployment uses a pod user namespace (`hostUsers: false`), `procMount: Unmasked` for nested procfs, and a Localhost seccomp profile derived from containerd's default with Bubblewrap namespace setup syscalls allowed.
+It remains nonroot, with all capabilities dropped and privilege escalation disabled.
+The optional Python container recipe has not yet been exercised.
 
 ## Navigation limits
 
@@ -217,7 +222,7 @@ Archive extraction rejects symlinks, hardlinks, special files, traversal, and ov
 The source pane cannot open files outside the extracted tree, including standard-library and dependency-cache files.
 Workspaces are temporary, bounded, and removed at shutdown.
 
-Dependency provisioning, hosted accounts, check-run views, issue comments, and thread resolution remain future work.
+Dependency provisioning, hosted accounts, check-run views, posting top-level issue comments, and thread resolution remain future work.
 The GitHub PR link provides actions not yet exposed here.
 
 ## MCP assistance
@@ -226,7 +231,7 @@ Fjord exposes a Streamable HTTP MCP server at `/mcp`. Open a real PR in the brow
 The Settings menu shows the endpoint and browser-session connection state.
 No model provider, API key, or embedded chat is configured in Fjord.
 
-An MCP client can discover open review sessions, read draft and published comments, read code at the pinned revision, query the language server, and show source or navigation results in the browser.
+An MCP client can discover open review sessions, read draft and published inline comments, PR conversation and review decisions, read code at the pinned revision, query the language server, and show source or navigation results in the browser.
 It can propose inline comments and GitHub suggestion drafts. These remain visibly AI-attributed drafts for the reviewer to inspect, edit, or remove.
 Tools do not submit reviews, reply on GitHub, execute language-server commands, or write source files.
 

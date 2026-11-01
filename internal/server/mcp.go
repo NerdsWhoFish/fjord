@@ -21,10 +21,11 @@ import (
 )
 
 type reviewInput struct {
-	SessionID     string `json:"sessionId"`
-	CommentOffset int    `json:"commentOffset,omitempty" jsonschema:"Offset into published GitHub comments; defaults to zero."`
-	FileOffset    int    `json:"fileOffset,omitempty" jsonschema:"Offset into changed file metadata; defaults to zero."`
-	Limit         int    `json:"limit,omitempty" jsonschema:"Page size for comments and files, at most 100; defaults to 20."`
+	SessionID          string `json:"sessionId"`
+	CommentOffset      int    `json:"commentOffset,omitempty" jsonschema:"Offset into published GitHub inline comments; defaults to zero."`
+	ConversationOffset int    `json:"conversationOffset,omitempty" jsonschema:"Offset into PR conversation comments and submitted reviews; defaults to zero."`
+	FileOffset         int    `json:"fileOffset,omitempty" jsonschema:"Offset into changed file metadata; defaults to zero."`
+	Limit              int    `json:"limit,omitempty" jsonschema:"Page size for comments, conversation, and files, at most 100; defaults to 20."`
 }
 
 type fileInput struct {
@@ -96,7 +97,7 @@ func (s *Server) mcpServer() *mcp.Server {
 	registerMCPTool(server, "list_sessions", "List open Fjord review sessions and their exact revisions.", true, func(context.Context, struct{}) (any, error) {
 		return map[string]any{"sessions": s.sessions.list()}, nil
 	})
-	registerMCPTool(server, "get_review", "Read PR metadata, browser drafts, pending action status, and paginated GitHub inline comments and changed-file metadata. Follow nextCommentOffset and nextFileOffset when present. Use read_file for source.", true, s.mcpReview)
+	registerMCPTool(server, "get_review", "Read PR metadata, browser drafts, pending action status, and paginated GitHub inline comments, PR conversation, and changed-file metadata. Follow nextCommentOffset, nextConversationOffset, and nextFileOffset when present. Use read_file for source.", true, s.mcpReview)
 	registerMCPTool(server, "read_file", "Read a bounded source range from this review's exact head or base, including unchanged files.", true, s.mcpReadFile)
 	registerMCPTool(server, "navigate", "Query language-server review tools. goTo returns definitions first and references together. reveal queues results for the browser; it never submits a review.", false, s.mcpNavigate)
 	registerMCPTool(server, "show_source", "Queue opening a source file and line in the connected Fjord browser.", false, s.mcpShowSource)
@@ -144,7 +145,7 @@ func (s *Server) mcpReview(ctx context.Context, in reviewInput) (any, error) {
 	if in.Limit == 0 {
 		in.Limit = 20
 	}
-	if in.CommentOffset < 0 || in.FileOffset < 0 || in.Limit < 1 || in.Limit > 100 {
+	if in.CommentOffset < 0 || in.ConversationOffset < 0 || in.FileOffset < 0 || in.Limit < 1 || in.Limit > 100 {
 		return nil, errors.New("review page offsets must be nonnegative and limit must be 1 to 100")
 	}
 	session, err := s.sessions.get(in.SessionID)
@@ -155,8 +156,12 @@ func (s *Server) mcpReview(ctx context.Context, in reviewInput) (any, error) {
 	if err != nil {
 		return nil, err
 	}
+	conversation, err := s.config.GitHub.Conversation(ctx, session.PR.Owner, session.PR.Repo, session.PR.Number)
+	if err != nil {
+		return nil, err
+	}
 	fileTotal := len(session.PR.Files)
-	if in.CommentOffset > len(comments) || in.FileOffset > fileTotal {
+	if in.CommentOffset > len(comments) || in.ConversationOffset > len(conversation) || in.FileOffset > fileTotal {
 		return nil, errors.New("review page offset exceeds available results")
 	}
 	fileEnd := min(fileTotal, in.FileOffset+in.Limit)
@@ -179,15 +184,30 @@ func (s *Server) mcpReview(ctx context.Context, in reviewInput) (any, error) {
 	if commentEnd == in.CommentOffset && commentEnd < len(comments) {
 		return nil, errors.New("a published comment exceeds the 256 KiB tool response limit; inspect it on GitHub")
 	}
+	conversationEnd, conversationBytes := in.ConversationOffset, 0
+	for conversationEnd < len(conversation) && conversationEnd-in.ConversationOffset < in.Limit {
+		if conversationBytes+len(conversation[conversationEnd].Body) > 256*1024 {
+			break
+		}
+		conversationBytes += len(conversation[conversationEnd].Body)
+		conversationEnd++
+	}
+	if conversationEnd == in.ConversationOffset && conversationEnd < len(conversation) {
+		return nil, errors.New("a conversation entry exceeds the 256 KiB tool response limit; inspect it on GitHub")
+	}
 	result := map[string]any{
 		"session": session, "publishedComments": comments[in.CommentOffset:commentEnd],
 		"publishedCommentTotal": len(comments), "changedFileTotal": fileTotal,
+		"conversation": conversation[in.ConversationOffset:conversationEnd], "conversationTotal": len(conversation),
 	}
 	if commentEnd < len(comments) {
 		result["nextCommentOffset"] = commentEnd
 	}
 	if fileEnd < fileTotal {
 		result["nextFileOffset"] = fileEnd
+	}
+	if conversationEnd < len(conversation) {
+		result["nextConversationOffset"] = conversationEnd
 	}
 	return result, nil
 }

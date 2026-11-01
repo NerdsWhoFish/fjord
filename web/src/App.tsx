@@ -17,6 +17,7 @@ import "./workspace-insights.css";
 import { CodePanel } from "./CodePanel";
 import { FileTree } from "./FileTree";
 import { SettingsMenu } from "./SettingsMenu";
+import { useDiffMode } from "./diff-preference";
 import { demoBaseSource, demoPR, demoSource, demoThreads } from "./demo";
 import { emptyDraft, readDraft, ReviewPanel, writeDraft } from "./ReviewPanel";
 import type { ReviewDraft } from "./ReviewPanel";
@@ -26,6 +27,7 @@ import { codeActionSuggestions } from "./code-action-suggestions";
 import { remainingDraft, submissionBody } from "./review-draft";
 import type {
   CodeLocation,
+  ConversationEntry,
   ChangedFile,
   Config,
   CodeAnnotations,
@@ -57,6 +59,7 @@ function Brand() {
 }
 
 export function App() {
+  const [diffMode, setDiffMode] = useDiffMode();
   const [url, setURL] = useState("");
   const [pr, setPR] = useState<PullRequest>();
   const [demo, setDemo] = useState(false);
@@ -77,6 +80,8 @@ export function App() {
   draftRef.current = draft;
   const [pendingComment, setPendingComment] = useState<Selection>();
   const [threads, setThreads] = useState<ThreadComment[]>([]);
+  const [conversation, setConversation] = useState<ConversationEntry[]>([]);
+  const [threadsLoading, setThreadsLoading] = useState(false);
   const [threadsError, setThreadsError] = useState("");
   const [reviewOpen, setReviewOpen] = useState(false);
   const [assistantResult, setAssistantResult] = useState<{
@@ -310,6 +315,8 @@ export function App() {
     setDraft(restored);
     setViewed(new Set());
     setThreads([]);
+    setConversation([]);
+    setThreadsLoading(false);
     setThreadsError("");
     setNotice("");
     setError("");
@@ -324,13 +331,19 @@ export function App() {
     if (!next) return;
     if (isDemo) {
       setThreads(demoThreads);
+      setConversation([]);
+      setThreadsLoading(false);
       return;
     }
     const currentPR = prEpoch.current;
     const currentRequest = ++threadEpoch.current;
     setThreadsError("");
+    setThreadsLoading(true);
     try {
-      const result = await api<{ comments: ThreadComment[] }>("comments", {
+      const result = await api<{
+        comments: ThreadComment[];
+        conversation: ConversationEntry[];
+      }>("comments", {
         owner: next.owner,
         repo: next.repo,
         number: next.number,
@@ -338,8 +351,10 @@ export function App() {
       if (
         prEpoch.current === currentPR &&
         threadEpoch.current === currentRequest
-      )
+      ) {
         setThreads(result.comments || []);
+        setConversation(result.conversation || []);
+      }
     } catch (error) {
       if (
         prEpoch.current === currentPR &&
@@ -350,6 +365,12 @@ export function App() {
             ? error.message
             : "Could not load the conversation.",
         );
+    } finally {
+      if (
+        prEpoch.current === currentPR &&
+        threadEpoch.current === currentRequest
+      )
+        setThreadsLoading(false);
     }
   }
   function leavePR() {
@@ -870,6 +891,8 @@ export function App() {
         <header>
           <Brand />
           <SettingsMenu
+            diffMode={diffMode}
+            onDiffMode={setDiffMode}
             session={reviewSession}
             onRetrySession={reviewSession.retry}
           />
@@ -1043,6 +1066,8 @@ export function App() {
               onLocation={showInspectionLocation}
             />
             <SettingsMenu
+              diffMode={diffMode}
+              onDiffMode={setDiffMode}
               session={reviewSession}
               onRetrySession={reviewSession.retry}
             />
@@ -1110,6 +1135,11 @@ export function App() {
           <div className="code-column" id="code-content" tabIndex={-1}>
             {file ? (
               <CodePanel
+                diffMode={diffMode}
+                threads={threads}
+                drafts={draft.comments}
+                onReviewDrafts={() => setReviewOpen(true)}
+                onReply={demo ? undefined : reply}
                 pr={pr}
                 file={file}
                 scrollTarget={scrollTarget}
@@ -1194,6 +1224,8 @@ export function App() {
           draft={draft}
           onDraft={changeDraft}
           threads={threads}
+          conversation={conversation}
+          threadsLoading={threadsLoading}
           threadsError={threadsError}
           onReloadThreads={() => {
             void reloadThreads();

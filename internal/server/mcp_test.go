@@ -27,6 +27,12 @@ type pagedSessionGitHub struct{ sessionGitHub }
 func (*pagedSessionGitHub) Comments(context.Context, string, string, int) ([]github.ThreadComment, error) {
 	return []github.ThreadComment{{ID: 1, Body: "First"}, {ID: 2, Body: "Second"}, {ID: 3, Body: "Third"}}, nil
 }
+func (*pagedSessionGitHub) Conversation(context.Context, string, string, int) ([]github.ConversationEntry, error) {
+	return []github.ConversationEntry{
+		{ID: 1, Kind: "comment", Body: "Question"},
+		{ID: 2, Kind: "review", Body: "Answer", State: "APPROVED"},
+	}, nil
+}
 
 type sessionNavigation struct{ fakeNavigation }
 
@@ -258,13 +264,44 @@ func TestMCPReviewPaginationDoesNotMutateSnapshot(t *testing.T) {
 	}
 	result := output.(map[string]any)
 	comments := result["publishedComments"].([]github.ThreadComment)
+	conversation := result["conversation"].([]github.ConversationEntry)
 	session := result["session"].(reviewSession)
 	if len(comments) != 1 || comments[0].ID != 2 || result["nextCommentOffset"] != 2 ||
-		result["nextFileOffset"] != 1 || len(session.PR.Files) != 1 || session.PR.Files[0].Patch != "" {
+		len(conversation) != 1 || conversation[0].Kind != "comment" || result["nextConversationOffset"] != 1 ||
+		result["conversationTotal"] != 2 || result["nextFileOffset"] != 1 || len(session.PR.Files) != 1 || session.PR.Files[0].Patch != "" {
 		t.Fatalf("review pagination failed: %+v", result)
 	}
 	original, _ := store.get(id)
 	if len(original.PR.Files) != 2 || original.PR.Files[0].Patch == "" {
 		t.Fatal("metadata pagination changed the immutable review diff")
+	}
+	output, err = server.mcpReview(context.Background(), reviewInput{SessionID: id, ConversationOffset: 1, Limit: 1})
+	if err != nil {
+		t.Fatal(err)
+	}
+	result = output.(map[string]any)
+	conversation = result["conversation"].([]github.ConversationEntry)
+	if len(conversation) != 1 || conversation[0].State != "APPROVED" || result["nextConversationOffset"] != nil {
+		t.Fatalf("conversation second page failed: %+v", result)
+	}
+	for _, offset := range []int{-1, 3} {
+		if _, err := server.mcpReview(context.Background(), reviewInput{SessionID: id, ConversationOffset: offset}); err == nil {
+			t.Errorf("invalid conversation offset accepted: %d", offset)
+		}
+	}
+}
+
+type oversizedConversationGitHub struct{ sessionGitHub }
+
+func (*oversizedConversationGitHub) Conversation(context.Context, string, string, int) ([]github.ConversationEntry, error) {
+	return []github.ConversationEntry{{ID: 1, Kind: "comment", Body: strings.Repeat("x", 256*1024+1)}}, nil
+}
+
+func TestMCPReviewBoundsConversationPayload(t *testing.T) {
+	store := newSessionStore()
+	id, _ := store.open(sessionPR(), emptySessionDraft())
+	server := &Server{sessions: store, config: Config{GitHub: &oversizedConversationGitHub{}}}
+	if _, err := server.mcpReview(context.Background(), reviewInput{SessionID: id}); err == nil || !strings.Contains(err.Error(), "256 KiB") {
+		t.Fatalf("oversized conversation accepted: %v", err)
 	}
 }

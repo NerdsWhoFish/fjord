@@ -73,15 +73,33 @@ func (c *Comment) UnmarshalJSON(data []byte) error {
 }
 
 type ThreadComment struct {
+	ID                int64  `json:"id"`
+	Body              string `json:"body"`
+	Path              string `json:"path"`
+	Line              int    `json:"line"`
+	Side              string `json:"side"`
+	StartLine         int    `json:"startLine,omitempty"`
+	StartSide         string `json:"startSide,omitempty"`
+	Author            string `json:"author"`
+	URL               string `json:"url"`
+	InReplyToID       int64  `json:"inReplyToId,omitempty"`
+	OriginalLine      int    `json:"originalLine,omitempty"`
+	OriginalStartLine int    `json:"originalStartLine,omitempty"`
+	CommitID          string `json:"commitId,omitempty"`
+	OriginalCommitID  string `json:"originalCommitId,omitempty"`
+	CreatedAt         string `json:"createdAt,omitempty"`
+	SubjectType       string `json:"subjectType,omitempty"`
+	Outdated          bool   `json:"outdated"`
+}
+
+type ConversationEntry struct {
 	ID        int64  `json:"id"`
+	Kind      string `json:"kind"`
 	Body      string `json:"body"`
-	Path      string `json:"path"`
-	Line      int    `json:"line"`
-	Side      string `json:"side"`
-	StartLine int    `json:"startLine,omitempty"`
-	StartSide string `json:"startSide,omitempty"`
 	Author    string `json:"author"`
 	URL       string `json:"url"`
+	CreatedAt string `json:"createdAt"`
+	State     string `json:"state,omitempty"`
 }
 
 // APIError deliberately excludes GitHub response bodies, which can contain

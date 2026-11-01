@@ -3,13 +3,18 @@ import { ThemeToggle } from "./ThemeToggle";
 import "./settings-menu.css";
 import "./mcp-results.css";
 import type { SessionState } from "./session-client";
+import type { DiffMode } from "./diff-preference";
 
 export function SettingsMenu({
   session,
   onRetrySession,
+  diffMode,
+  onDiffMode,
 }: {
   session?: SessionState;
   onRetrySession?: () => void;
+  diffMode?: DiffMode;
+  onDiffMode?: (mode: DiffMode) => void;
 } = {}) {
   const menu = useRef<HTMLDetailsElement>(null);
   const trigger = useRef<HTMLElement>(null);
@@ -66,6 +71,18 @@ export function SettingsMenu({
       <div className="settings-panel" role="group" aria-label="Fjord settings">
         <span className="eyebrow">APPEARANCE</span>
         <ThemeToggle />
+        {diffMode && onDiffMode && (
+          <label className="diff-mode-setting">
+            Diff layout
+            <select
+              value={diffMode}
+              onChange={(event) => onDiffMode(event.target.value as DiffMode)}
+            >
+              <option value="unified">Unified</option>
+              <option value="split">Split</option>
+            </select>
+          </label>
+        )}
         {session && session.status !== "disabled" && (
           <section className="mcp-connection" aria-label="MCP connection">
             <span className="eyebrow">AI VIA MCP</span>

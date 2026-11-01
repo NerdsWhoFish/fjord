@@ -29,6 +29,7 @@ type GitHub interface {
 	Content(context.Context, string, string, string, string) (string, error)
 	Review(context.Context, string, string, int, github.Review) (string, error)
 	Comments(context.Context, string, string, int) ([]github.ThreadComment, error)
+	Conversation(context.Context, string, string, int) ([]github.ConversationEntry, error)
 	Reply(context.Context, string, string, int, int64, string) (string, error)
 	Archive(context.Context, string, string, string) (io.ReadCloser, error)
 }
@@ -335,7 +336,11 @@ func (s *Server) comments(w http.ResponseWriter, r *http.Request) error {
 	if err != nil {
 		return err
 	}
-	jsonReply(w, map[string]any{"comments": c})
+	conversation, err := s.config.GitHub.Conversation(r.Context(), in.Owner, in.Repo, in.Number)
+	if err != nil {
+		return err
+	}
+	jsonReply(w, map[string]any{"comments": c, "conversation": conversation})
 	return nil
 }
 func (s *Server) reply(w http.ResponseWriter, r *http.Request) error {

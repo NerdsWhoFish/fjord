@@ -1,0 +1,20 @@
+.conversation-timeline {
+  display: grid;
+  gap: 12px;
+}
+.conversation-timeline .thread-author {
+  flex-wrap: wrap;
+}
+.conversation-timeline p {
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.conversation-timeline time,
+.conversation-event {
+  color: var(--muted);
+  font-size: 12px;
+}
+.pr-description summary {
+  cursor: pointer;
+  overflow-wrap: anywhere;
+}

@@ -34,11 +34,32 @@ func (f *fakeGitHub) Review(_ context.Context, _ string, _ string, _ int, r gith
 func (f *fakeGitHub) Comments(context.Context, string, string, int) ([]github.ThreadComment, error) {
 	return []github.ThreadComment{}, nil
 }
+func (f *fakeGitHub) Conversation(context.Context, string, string, int) ([]github.ConversationEntry, error) {
+	return []github.ConversationEntry{}, nil
+}
 func (f *fakeGitHub) Reply(context.Context, string, string, int, int64, string) (string, error) {
 	return "", nil
 }
 func (f *fakeGitHub) Archive(context.Context, string, string, string) (io.ReadCloser, error) {
 	return io.NopCloser(strings.NewReader("archive")), nil
+}
+
+func TestCommentsEndpointIncludesConversationAndInlineThreads(t *testing.T) {
+	handler := New(Config{Host: "127.0.0.1:4727", GitHub: &pagedSessionGitHub{}, Navigation: fakeNavigation{}})
+	response := request(handler, "/api/comments", `{"owner":"acme","repo":"app","number":42}`, "127.0.0.1:4727", "http://127.0.0.1:4727", "application/json")
+	if response.Code != http.StatusOK {
+		t.Fatalf("comments returned %d: %s", response.Code, response.Body.String())
+	}
+	var body struct {
+		Comments     []github.ThreadComment     `json:"comments"`
+		Conversation []github.ConversationEntry `json:"conversation"`
+	}
+	if err := json.Unmarshal(response.Body.Bytes(), &body); err != nil {
+		t.Fatal(err)
+	}
+	if len(body.Comments) != 3 || len(body.Conversation) != 2 || body.Conversation[1].State != "APPROVED" {
+		t.Fatalf("incomplete discussion response: %+v", body)
+	}
 }
 
 type fakeNavigation struct{}

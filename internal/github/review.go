@@ -257,15 +257,22 @@ func (c *Client) Comments(ctx context.Context, owner, repo string, number int) (
 	bodyBytes := 0
 	for page := 1; page <= maxItems/pageSize; page++ {
 		var entries []struct {
-			ID        int64  `json:"id"`
-			Body      string `json:"body"`
-			Path      string `json:"path"`
-			Line      int    `json:"line"`
-			Side      string `json:"side"`
-			StartLine int    `json:"start_line"`
-			StartSide string `json:"start_side"`
-			URL       string `json:"html_url"`
-			User      struct {
+			ID                int64  `json:"id"`
+			Body              string `json:"body"`
+			Path              string `json:"path"`
+			Line              int    `json:"line"`
+			Side              string `json:"side"`
+			StartLine         int    `json:"start_line"`
+			StartSide         string `json:"start_side"`
+			URL               string `json:"html_url"`
+			InReplyToID       int64  `json:"in_reply_to_id"`
+			OriginalLine      int    `json:"original_line"`
+			OriginalStartLine int    `json:"original_start_line"`
+			CommitID          string `json:"commit_id"`
+			OriginalCommitID  string `json:"original_commit_id"`
+			CreatedAt         string `json:"created_at"`
+			SubjectType       string `json:"subject_type"`
+			User              struct {
 				Login string `json:"login"`
 			} `json:"user"`
 		}
@@ -278,7 +285,13 @@ func (c *Client) Comments(ctx context.Context, owner, repo string, number int) (
 			if bodyBytes > maxResponse {
 				return nil, errors.New("review discussion exceeds the 16 MiB limit; read it on GitHub")
 			}
-			comments = append(comments, ThreadComment{ID: entry.ID, Body: entry.Body, Path: entry.Path, Line: entry.Line, Side: entry.Side, StartLine: entry.StartLine, StartSide: entry.StartSide, Author: entry.User.Login, URL: entry.URL})
+			comments = append(comments, ThreadComment{
+				ID: entry.ID, Body: entry.Body, Path: entry.Path, Line: entry.Line, Side: entry.Side,
+				StartLine: entry.StartLine, StartSide: entry.StartSide, Author: entry.User.Login, URL: entry.URL,
+				InReplyToID: entry.InReplyToID, OriginalLine: entry.OriginalLine, OriginalStartLine: entry.OriginalStartLine,
+				CommitID: entry.CommitID, OriginalCommitID: entry.OriginalCommitID, CreatedAt: entry.CreatedAt,
+				SubjectType: entry.SubjectType, Outdated: entry.Line == 0 && entry.SubjectType != "file",
+			})
 		}
 		if len(comments) > maxItems || (hasNext(headers) && page == maxItems/pageSize) {
 			return nil, errors.New("review comments exceed the supported limit; read the remaining discussion on GitHub")

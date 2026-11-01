@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import type {
   DraftComment,
+  ConversationEntry,
   PullRequest,
   ReviewEvent,
   Selection,
@@ -12,6 +13,7 @@ import { useSyntax } from "./useSyntax";
 import type { SyntaxRequest } from "./syntax-types";
 import { insertSuggestion, suggestionUnavailable } from "./suggestion";
 import "./comment-composer.css";
+import { ConversationTimeline } from "./ConversationTimeline";
 
 export interface ReviewDraft {
   comments: DraftComment[];
@@ -95,6 +97,8 @@ interface Props {
   draft: ReviewDraft;
   onDraft: (draft: ReviewDraft) => void;
   threads: ThreadComment[];
+  conversation?: ConversationEntry[];
+  threadsLoading?: boolean;
   threadsError?: string;
   onReloadThreads: () => void;
   onSubmit: () => Promise<void>;
@@ -111,6 +115,8 @@ export function ReviewPanel({
   draft,
   onDraft,
   threads,
+  conversation = [],
+  threadsLoading = false,
   threadsError,
   onReloadThreads,
   onSubmit,
@@ -362,8 +368,12 @@ export function ReviewPanel({
           )}
           <div className="section-title thread-title">
             <span className="eyebrow">CONVERSATION</span>
-            <button className="text-button" onClick={onReloadThreads}>
-              Refresh
+            <button
+              className="text-button"
+              onClick={onReloadThreads}
+              disabled={threadsLoading}
+            >
+              {threadsLoading ? "Loading..." : "Refresh"}
             </button>
           </div>
           {threadsError ? (
@@ -371,10 +381,15 @@ export function ReviewPanel({
               {threadsError}
             </p>
           ) : (
-            !threads.length && (
-              <p className="muted small">No inline review comments yet.</p>
+            !threadsLoading &&
+            !threads.length &&
+            !conversation.length && (
+              <p className="muted small">No conversation yet.</p>
             )
           )}
+          {threadsLoading && <p role="status">Loading conversation...</p>}
+          <ConversationTimeline pr={pr} entries={conversation} />
+          {threads.length > 0 && <h3 className="eyebrow">LINE COMMENTS</h3>}
           {threads.map((thread) => (
             <article className="thread" key={thread.id}>
               <div className="thread-author">

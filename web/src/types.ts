@@ -105,6 +105,23 @@ export interface ThreadComment {
   startSide?: Side;
   author: string;
   url: string;
+  inReplyToId?: number;
+  originalLine?: number;
+  originalStartLine?: number;
+  commitId?: string;
+  originalCommitId?: string;
+  createdAt?: string;
+  subjectType?: "line" | "file";
+  outdated?: boolean;
+}
+export interface ConversationEntry {
+  id: number;
+  kind: "comment" | "review";
+  body: string;
+  author: string;
+  url: string;
+  createdAt: string;
+  state?: string;
 }
 export interface CodeLocation {
   path: string;
