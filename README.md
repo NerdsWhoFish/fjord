@@ -15,8 +15,7 @@ Fjord refuses to run an unconfined language server.
 
 ```sh
 gh auth login --hostname github.com
-go install golang.org/x/tools/gopls@v0.24.0
-go install github.com/opentofu/tofu-ls@v0.5.3
+sh scripts/install-language-servers.sh
 make build
 ./bin/fjord
 ```
@@ -261,6 +260,7 @@ Browser draft storage contains review text, so use a trusted browser profile.
 JSON logs contain trace/span IDs.
 Set `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` through the runtime environment to export logs and traces using OTLP HTTP/protobuf.
 Without an endpoint, telemetry stays local.
+Set `FJORD_ENVIRONMENT=production` in hosted deployments so backend signals and the browser relay identify the deployment correctly; it defaults to `local`.
 W3C TraceContext and Baggage are supported.
 Never put ingestion credentials in Git, command arguments, logs, or browser code.
 

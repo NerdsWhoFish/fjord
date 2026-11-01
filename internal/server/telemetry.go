@@ -11,12 +11,14 @@ import (
 	"math"
 	"net/http"
 	"time"
+
+	"github.com/NerdsWhoFish/fjord/internal/telemetry"
 )
 
 // Rebuild the envelope rather than forwarding browser-supplied metadata or text.
 func safeEnvelope(raw map[string]json.RawMessage, version string) map[string]any {
 	now := time.Now().UTC().Format(time.RFC3339Nano)
-	result := map[string]any{"meta": map[string]any{"app": map[string]string{"name": "fjord", "version": version, "environment": "local"}, "sdk": map[string]string{"name": "fjord-relay", "version": "0.1.0"}}}
+	result := map[string]any{"meta": map[string]any{"app": map[string]string{"name": "fjord", "version": version, "environment": telemetry.Environment()}, "sdk": map[string]string{"name": "fjord-relay", "version": "0.1.0"}}}
 	var exceptions []json.RawMessage
 	if json.Unmarshal(raw["exceptions"], &exceptions) == nil && len(exceptions) > 0 {
 		result["exceptions"] = []any{map[string]any{"type": "Error", "value": "Browser operation failed", "timestamp": now}}

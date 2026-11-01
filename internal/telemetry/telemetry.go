@@ -20,6 +20,13 @@ import (
 
 type handler struct{ local, remote slog.Handler }
 
+func Environment() string {
+	if value := os.Getenv("FJORD_ENVIRONMENT"); value != "" {
+		return value
+	}
+	return "local"
+}
+
 func (h handler) Enabled(ctx context.Context, l slog.Level) bool { return h.local.Enabled(ctx, l) }
 func (h handler) Handle(ctx context.Context, r slog.Record) error {
 	span := trace.SpanContextFromContext(ctx)
@@ -53,7 +60,7 @@ func Setup(ctx context.Context, version string) (func(context.Context) error, er
 	// Exporter diagnostics can contain transport URLs and credential-bearing headers.
 	otel.SetErrorHandler(otel.ErrorHandlerFunc(func(error) { slog.Error("telemetry export failed", "operation", "telemetry.export") }))
 	otel.SetTextMapPropagator(propagation.NewCompositeTextMapPropagator(propagation.TraceContext{}, propagation.Baggage{}))
-	res := resource.NewSchemaless(attribute.String("service.name", "fjord"), attribute.String("service.version", version), attribute.String("deployment.environment.name", "local"))
+	res := resource.NewSchemaless(attribute.String("service.name", "fjord"), attribute.String("service.version", version), attribute.String("deployment.environment.name", Environment()))
 	opts := []traceSDK.TracerProviderOption{traceSDK.WithResource(res)}
 	var lp *logSDK.LoggerProvider
 	if os.Getenv("OTEL_EXPORTER_OTLP_ENDPOINT") != "" {

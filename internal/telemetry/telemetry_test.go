@@ -14,6 +14,7 @@ import (
 	"go.opentelemetry.io/otel/propagation"
 	logs "go.opentelemetry.io/proto/otlp/collector/logs/v1"
 	traces "go.opentelemetry.io/proto/otlp/collector/trace/v1"
+	common "go.opentelemetry.io/proto/otlp/common/v1"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -58,6 +59,7 @@ func TestOTLPExportsCorrelatedSignals(t *testing.T) {
 	defer collector.Close()
 	t.Setenv("OTEL_EXPORTER_OTLP_ENDPOINT", collector.URL)
 	t.Setenv("OTEL_EXPORTER_OTLP_HEADERS", "Authorization=Basic%20test-only")
+	t.Setenv("FJORD_ENVIRONMENT", "production")
 	shutdown, err := Setup(context.Background(), "test-build")
 	if err != nil {
 		t.Fatal(err)
@@ -75,6 +77,17 @@ func TestOTLPExportsCorrelatedSignals(t *testing.T) {
 	defer mu.Unlock()
 	if len(traceRequest.ResourceSpans) != 1 || len(logRequest.ResourceLogs) != 1 {
 		t.Fatal("both signals must arrive")
+	}
+	for _, attrs := range [][]*common.KeyValue{traceRequest.ResourceSpans[0].Resource.Attributes, logRequest.ResourceLogs[0].Resource.Attributes} {
+		found := false
+		for _, attr := range attrs {
+			if attr.Key == "deployment.environment.name" && attr.Value.GetStringValue() == "production" {
+				found = true
+			}
+		}
+		if !found {
+			t.Fatal("exported resource must identify the configured deployment environment")
+		}
 	}
 	s := traceRequest.ResourceSpans[0].ScopeSpans[0].Spans[0]
 	l := logRequest.ResourceLogs[0].ScopeLogs[0].LogRecords[0]

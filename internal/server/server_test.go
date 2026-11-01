@@ -132,6 +132,7 @@ func TestReviewPayloadPreserved(t *testing.T) {
 	}
 }
 func TestFaroEnvelopeDropsPrivateContent(t *testing.T) {
+	t.Setenv("FJORD_ENVIRONMENT", "production")
 	var raw map[string]json.RawMessage
 	_ = json.Unmarshal([]byte(`{"meta":{"user":{"email":"private@example.com"},"page":{"url":"https://private/repo?token=secret"}},"exceptions":[{"value":"secret code","stacktrace":[{"filename":"private.go"}]}],"events":[{"name":"navigate","attributes":{"code":"secret"}},{"name":"private.event"}],"measurements":[{"type":"web-vitals","values":{"LCP":25,"secret":30}}],"traces":{"secret":"raw"}}`), &raw)
 	data, _ := json.Marshal(safeEnvelope(raw, "test"))
@@ -143,6 +144,9 @@ func TestFaroEnvelopeDropsPrivateContent(t *testing.T) {
 	}
 	if !strings.Contains(text, "navigate") || !strings.Contains(text, "LCP") {
 		t.Fatal("dropped safe signals")
+	}
+	if !strings.Contains(text, `"environment":"production"`) {
+		t.Fatal("relay must use the server's deployment environment")
 	}
 }
 
