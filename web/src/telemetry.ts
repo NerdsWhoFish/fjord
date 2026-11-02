@@ -30,6 +30,8 @@ export function startTelemetry() {
         "/api/session/open",
         "/api/session/sync",
         "/api/session/close",
+        "/api/session/list",
+        "/api/session/remove",
         "/api/telemetry",
       ],
       assets: Array.from(document.scripts)
@@ -41,6 +43,7 @@ export function startTelemetry() {
         "review.submit",
         "mcp.sync",
         "mcp.session",
+        "session.management",
         "mcp.apply",
         "reply",
         "app.render",
