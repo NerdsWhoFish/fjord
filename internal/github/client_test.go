@@ -36,6 +36,8 @@ func pullJSON(head string, files int) string {
 
 func fixture(w http.ResponseWriter, r *http.Request) bool {
 	switch {
+	case r.URL.Path == "/user":
+		fmt.Fprint(w, `{"login":"another-reviewer"}`)
 	case r.URL.Path == "/repos/acme/app/pulls/42":
 		fmt.Fprint(w, pullJSON(headSHA, 1))
 	case strings.Contains(r.URL.Path, "/compare/"):

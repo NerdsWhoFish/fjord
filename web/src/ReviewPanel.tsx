@@ -16,6 +16,7 @@ import "./comment-composer.css";
 import { ConversationTimeline } from "./ConversationTimeline";
 import { MarkdownContent } from "./MarkdownContent";
 import { MarkdownEditor } from "./MarkdownEditor";
+import { reviewRestriction } from "./review-policy";
 
 export interface ReviewDraft {
   comments: DraftComment[];
@@ -52,6 +53,7 @@ export function canSubmitReview(
   draft: ReviewDraft,
 ) {
   if (demo || pr.state !== "open") return false;
+  if (reviewRestriction(pr, draft.event)) return false;
   if (draft.event === "REQUEST_CHANGES") return !!draft.body.trim();
   if (draft.event === "COMMENT")
     return !!draft.body.trim() || draft.comments.length > 0;
@@ -339,6 +341,11 @@ export function ReviewPanel({
           <label htmlFor="review-decision">Review decision</label>
           <select
             id="review-decision"
+            aria-describedby={
+              reviewRestriction(pr, "REQUEST_CHANGES")
+                ? "self-review-restriction"
+                : undefined
+            }
             value={draft.event}
             disabled={sending}
             onChange={(e) =>
@@ -346,9 +353,24 @@ export function ReviewPanel({
             }
           >
             <option value="COMMENT">Comment</option>
-            <option value="APPROVE">Approve</option>
-            <option value="REQUEST_CHANGES">Request changes</option>
+            <option
+              value="APPROVE"
+              disabled={!!reviewRestriction(pr, "APPROVE")}
+            >
+              Approve
+            </option>
+            <option
+              value="REQUEST_CHANGES"
+              disabled={!!reviewRestriction(pr, "REQUEST_CHANGES")}
+            >
+              Request changes
+            </option>
           </select>
+          {reviewRestriction(pr, "REQUEST_CHANGES") && (
+            <p id="self-review-restriction" className="notice">
+              {reviewRestriction(pr, "REQUEST_CHANGES")}
+            </p>
+          )}
           <button
             className="primary wide"
             disabled={sending || !!editing || !canSubmitReview(pr, demo, draft)}

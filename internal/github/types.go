@@ -7,14 +7,15 @@ import (
 )
 
 type PR struct {
-	Owner  string `json:"owner"`
-	Repo   string `json:"repo"`
-	Number int    `json:"number"`
-	Title  string `json:"title"`
-	Body   string `json:"body"`
-	URL    string `json:"url"`
-	Author string `json:"author"`
-	State  string `json:"state"`
+	Owner    string `json:"owner"`
+	Repo     string `json:"repo"`
+	Number   int    `json:"number"`
+	Title    string `json:"title"`
+	Body     string `json:"body"`
+	URL      string `json:"url"`
+	Author   string `json:"author"`
+	Reviewer string `json:"reviewer,omitempty"`
+	State    string `json:"state"`
 	// BaseSHA is the merge base used by the diff, not the target branch tip.
 	BaseSHA string `json:"baseSHA"`
 	HeadSHA string `json:"headSHA"`

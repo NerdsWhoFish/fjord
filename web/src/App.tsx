@@ -22,6 +22,7 @@ import { SettingsMenu } from "./SettingsMenu";
 import { useDiffMode } from "./diff-preference";
 import { demoBaseSource, demoPR, demoSource, demoThreads } from "./demo";
 import { emptyDraft, readDraft, ReviewPanel, writeDraft } from "./ReviewPanel";
+import { ReviewDecisionButton } from "./ReviewDecisionButton";
 import type { ReviewDraft } from "./ReviewPanel";
 import { captureError, startTelemetry } from "./telemetry";
 import { combinedNavigation } from "./combined-navigation";
@@ -1104,17 +1105,12 @@ export function App() {
             >
               {(["COMMENT", "APPROVE", "REQUEST_CHANGES"] as ReviewEvent[]).map(
                 (event) => (
-                  <button
+                  <ReviewDecisionButton
                     key={event}
-                    className={event === "APPROVE" ? "review-approve" : ""}
-                    onClick={() => startReview(event)}
-                  >
-                    {event === "COMMENT"
-                      ? "Comment"
-                      : event === "APPROVE"
-                        ? "Approve"
-                        : "Request changes"}
-                  </button>
+                    pr={pr}
+                    event={event}
+                    onSelect={startReview}
+                  />
                 ),
               )}
               <button className="text-button" onClick={() => startReview()}>
