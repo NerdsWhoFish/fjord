@@ -258,7 +258,30 @@ func (c *Client) Load(ctx context.Context, owner, repo string, number int) (PR, 
 	if current.Head.SHA != pull.Head.SHA || current.Base.SHA != pull.Base.SHA {
 		return PR{}, errors.New("pull request changed while loading; reload it")
 	}
-	return PR{Owner: owner, Repo: repo, Number: number, Title: pull.Title, Body: pull.Body, URL: pull.URL, Author: pull.User.Login, State: pull.State, BaseSHA: comparison.MergeBase.SHA, HeadSHA: pull.Head.SHA, BaseRef: pull.Base.Ref, HeadRef: pull.Head.Ref, Files: files}, nil
+	reviewer, err := c.authenticatedReviewer(ctx)
+	if err != nil {
+		return PR{}, err
+	}
+	return PR{Owner: owner, Repo: repo, Number: number, Title: pull.Title, Body: pull.Body, URL: pull.URL, Author: pull.User.Login, Reviewer: reviewer, State: pull.State, BaseSHA: comparison.MergeBase.SHA, HeadSHA: pull.Head.SHA, BaseRef: pull.Base.Ref, HeadRef: pull.Head.Ref, Files: files}, nil
+}
+
+func (c *Client) authenticatedReviewer(ctx context.Context) (string, error) {
+	var user struct {
+		Login string `json:"login"`
+	}
+	_, err := c.json(ctx, http.MethodGet, "/user", nil, &user)
+	if err != nil {
+		var apiError *APIError
+		// Installation tokens can read pull requests without a user identity.
+		if errors.As(err, &apiError) && (apiError.Status == http.StatusForbidden || apiError.Status == http.StatusNotFound) {
+			return "", nil
+		}
+		return "", err
+	}
+	if strings.TrimSpace(user.Login) == "" {
+		return "", errors.New("GitHub did not return the authenticated reviewer identity")
+	}
+	return user.Login, nil
 }
 
 func hasNext(headers http.Header) bool {

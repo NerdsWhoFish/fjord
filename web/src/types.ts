@@ -78,6 +78,7 @@ export interface FileDiff {
   reason: string;
 }
 export interface PullRequest {
+  reviewer?: string;
   owner: string;
   repo: string;
   number: number;

@@ -134,6 +134,9 @@ func (c *Client) Review(ctx context.Context, owner, repo string, number int, rev
 	if pr.State != "open" {
 		return "", errors.New("only open pull requests can receive a review")
 	}
+	if pr.Reviewer != "" && strings.EqualFold(pr.Author, pr.Reviewer) && review.Event != "COMMENT" {
+		return "", errors.New("GitHub does not allow approving or requesting changes on your own pull request; submit a Comment review instead")
+	}
 	if err := validateCommentRanges(pr, review.Comments); err != nil {
 		return "", err
 	}
