@@ -1,0 +1,102 @@
+dialog.session-management {
+  width: min(820px, calc(100vw - 32px));
+  max-height: calc(100dvh - 40px);
+  overflow-y: auto;
+  background: var(--surface-raised);
+}
+.session-management .dialog-heading h2 {
+  margin-top: 8px;
+}
+.session-list-toolbar,
+.session-row-heading,
+.session-metadata {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+}
+.session-list-toolbar {
+  margin-top: 24px;
+  padding-bottom: 14px;
+  border-bottom: 1px solid var(--border);
+}
+.session-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.session-list > li {
+  padding: 22px 0;
+  border-bottom: 1px solid var(--border);
+}
+.session-list h3 {
+  margin: 7px 0;
+  font-size: 16px;
+  font-weight: 500;
+  overflow-wrap: anywhere;
+}
+.session-row-heading > div {
+  min-width: 0;
+}
+.session-row-heading button,
+.session-current-label {
+  flex-shrink: 0;
+}
+.session-current-label {
+  color: var(--ink);
+  border: 1px solid var(--border-strong);
+  border-radius: 4px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+.session-metadata {
+  justify-content: flex-start;
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 9px;
+}
+.session-management .session-id,
+.session-management .session-help {
+  color: var(--muted);
+  font-size: 12px;
+}
+.session-id code {
+  user-select: all;
+  overflow-wrap: anywhere;
+}
+.session-remove-confirmation {
+  margin-top: 14px;
+  padding: 14px;
+  border: 1px solid var(--border-strong);
+  border-radius: 5px;
+  background: var(--surface);
+}
+.session-remove-confirmation p {
+  margin-top: 0;
+}
+.session-remove-confirmation > div {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.session-notice:empty {
+  display: none;
+}
+.session-empty {
+  padding: 24px 0;
+}
+@media (max-width: 600px) {
+  dialog.session-management {
+    padding: 18px;
+    max-height: calc(100dvh - 24px);
+  }
+  .session-row-heading {
+    align-items: flex-start;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .session-row-heading > div {
+    flex-basis: 100%;
+  }
+}

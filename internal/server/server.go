@@ -88,6 +88,8 @@ func New(c Config) http.Handler {
 	s.route("/api/session/open", s.openSession)
 	s.route("/api/session/sync", s.syncSession)
 	s.route("/api/session/close", s.closeSession)
+	s.route("/api/session/list", s.listSessions)
+	s.route("/api/session/remove", s.removeSession)
 	mcpHandler := s.mcpHandler()
 	for _, method := range []string{"GET", "POST", "DELETE"} {
 		s.mux.Handle(method+" /mcp", mcpHandler)
@@ -153,7 +155,11 @@ func (s *Server) route(path string, fn func(http.ResponseWriter, *http.Request) 
 		if err := fn(w, r); err != nil {
 			span.SetStatus(codes.Error, "operation failed")
 			slog.ErrorContext(ctx, "request failed", "operation", path)
-			if errors.Is(err, errSessionGone) {
+			if errors.Is(err, errSessionRemoved) {
+				w.Header().Set("Content-Type", "application/json")
+				w.WriteHeader(http.StatusGone)
+				jsonReply(w, map[string]string{"error": err.Error(), "code": "session_removed"})
+			} else if errors.Is(err, errSessionGone) {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusNotFound)
 				jsonReply(w, map[string]string{"error": err.Error(), "code": "session_not_found"})

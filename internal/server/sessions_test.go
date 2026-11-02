@@ -1,7 +1,10 @@
 package server
 
 import (
+	"encoding/json"
 	"errors"
+	"fmt"
+	"net/http"
 	"strings"
 	"sync"
 	"testing"
@@ -9,6 +12,79 @@ import (
 
 	"github.com/NerdsWhoFish/fjord/internal/github"
 )
+
+func TestSessionManagementRoutes(t *testing.T) {
+	host := "localhost:8080"
+	handler := New(Config{Host: host, GitHub: &sessionGitHub{}, Navigation: sessionNavigation{}})
+	id := browserSession(t, handler, host)
+	list := request(handler, "/api/session/list", `{}`, host, "http://"+host, "application/json")
+	var result struct {
+		Sessions []map[string]any `json:"sessions"`
+	}
+	if list.Code != http.StatusOK || json.Unmarshal(list.Body.Bytes(), &result) != nil || len(result.Sessions) != 1 {
+		t.Fatalf("list failed: %d %s", list.Code, list.Body)
+	}
+	if result.Sessions[0]["id"] != id || result.Sessions[0]["draftCommentCount"] != float64(0) {
+		t.Fatalf("unexpected metadata: %v", result.Sessions)
+	}
+	if _, exposed := result.Sessions[0]["draft"]; exposed {
+		t.Fatal("listing exposed draft contents")
+	}
+	body := fmt.Sprintf(`{"id":%q}`, id)
+	for range 2 {
+		removed := request(handler, "/api/session/remove", body, host, "http://"+host, "application/json")
+		if removed.Code != http.StatusOK {
+			t.Fatalf("remove failed: %d %s", removed.Code, removed.Body)
+		}
+	}
+	// A late unload must not erase the deliberate-removal marker.
+	request(handler, "/api/session/close", body, host, "http://"+host, "application/json")
+	sync := request(handler, "/api/session/sync", body, host, "http://"+host, "application/json")
+	if sync.Code != http.StatusGone || !strings.Contains(sync.Body.String(), `"session_removed"`) {
+		t.Fatalf("removed session was not terminal: %d %s", sync.Code, sync.Body)
+	}
+	list = request(handler, "/api/session/list", `{}`, host, "http://"+host, "application/json")
+	if !strings.Contains(list.Body.String(), `"sessions":[]`) {
+		t.Fatalf("removed session still listed: %s", list.Body)
+	}
+	for _, path := range []string{"/api/session/list", "/api/session/remove"} {
+		blocked := request(handler, path, body, host, "https://evil.example", "application/json")
+		if blocked.Code != http.StatusForbidden {
+			t.Fatalf("%s accepted cross-origin request: %d", path, blocked.Code)
+		}
+	}
+}
+
+func TestRemovedSessionRetentionIsBoundedAndSeparateFromCapacity(t *testing.T) {
+	store := newSessionStore()
+	now := time.Now()
+	store.now = func() time.Time { return now }
+	id, _ := store.open(sessionPR(), emptySessionDraft())
+	if err := store.remove(id); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := store.get(id); !errors.Is(err, errSessionRemoved) {
+		t.Fatalf("get removed session: %v", err)
+	}
+	for len(store.removed) < maxRemovedSessions {
+		store.removed[fmt.Sprint(len(store.removed))] = now.Add(removedSessionTTL)
+	}
+	next, err := store.open(sessionPR(), emptySessionDraft())
+	if err != nil {
+		t.Fatalf("tombstones consumed active session capacity: %v", err)
+	}
+	if err := store.remove(next); err == nil {
+		t.Fatal("unbounded tombstone insertion")
+	}
+	if _, err := store.get(next); err != nil {
+		t.Fatalf("failed removal deleted live session: %v", err)
+	}
+	now = now.Add(removedSessionTTL)
+	store.list()
+	if len(store.removed) != 0 {
+		t.Fatal("expired tombstones were not pruned")
+	}
+}
 
 func sessionPR() github.PR {
 	return github.PR{

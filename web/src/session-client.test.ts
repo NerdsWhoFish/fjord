@@ -148,6 +148,44 @@ describe("browser review session synchronization", () => {
     runner.stop();
   });
 
+  it("keeps removed sessions disconnected until manual retry and preserves local drafts", async () => {
+    let opens = 0;
+    let removed = false;
+    const draft = { ...emptyDraft(), body: "Keep my local review" };
+    const states: SessionState[] = [];
+    const onError = vi.fn();
+    const send = transport(async (endpoint) => {
+      if (endpoint === "open") return { id: `s${++opens}` };
+      if (endpoint === "sync" && removed)
+        throw new SessionHTTPError("Removed", 410, "session_removed");
+      return { actions: [] };
+    });
+    const runner = startReviewSession({
+      pr,
+      snapshot: () => ({ draft }),
+      transport: send,
+      onState: (state) => states.push(state),
+      onError,
+      onAction: async () => {},
+    });
+    await flush();
+    removed = true;
+    await vi.advanceTimersByTimeAsync(2000);
+    expect(states.at(-1)).toEqual({ status: "disconnected", error: "Removed" });
+    const calls = send.mock.calls.length;
+    await vi.advanceTimersByTimeAsync(120_000);
+    expect(send.mock.calls).toHaveLength(calls);
+    expect(opens).toBe(1);
+    expect(onError).not.toHaveBeenCalled();
+    removed = false;
+    runner.retry();
+    await flush();
+    expect(states.at(-1)).toMatchObject({ id: "s2", status: "connected" });
+    expect(send.mock.calls.filter((call) => call[0] === "open")[1][1])
+      .toMatchObject({ draft });
+    runner.stop();
+  });
+
   it("aborts stale source work and does not acknowledge an action after switching PRs", async () => {
     const applying = deferred<void>();
     let context: ActionContext | undefined;

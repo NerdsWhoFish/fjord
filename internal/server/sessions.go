@@ -23,9 +23,12 @@ const sessionTTL = 2 * time.Hour
 const maxSessions = 32
 const maxPendingActions = 100
 const maxActionReceipts = 512
+const maxRemovedSessions = 4096
+const removedSessionTTL = 24 * time.Hour
 
 var draftIDPattern = regexp.MustCompile(`^[A-Za-z0-9_-]{1,128}$`)
 var errSessionGone = errors.New("review session expired or was closed")
+var errSessionRemoved = errors.New("review session was removed; reconnect manually to enable AI assistance")
 
 type sessionComment struct {
 	ID        string `json:"id"`
@@ -93,11 +96,12 @@ type reviewSession struct {
 type sessionStore struct {
 	mu       sync.Mutex
 	sessions map[string]*reviewSession
+	removed  map[string]time.Time
 	now      func() time.Time
 }
 
 func newSessionStore() *sessionStore {
-	return &sessionStore{sessions: make(map[string]*reviewSession), now: time.Now}
+	return &sessionStore{sessions: make(map[string]*reviewSession), removed: make(map[string]time.Time), now: time.Now}
 }
 
 func randomID() string {
@@ -111,6 +115,11 @@ func (s *sessionStore) prune() {
 	for id, session := range s.sessions {
 		if !now.Before(session.ExpiresAt) {
 			delete(s.sessions, id)
+		}
+	}
+	for id, expires := range s.removed {
+		if !now.Before(expires) {
+			delete(s.removed, id)
 		}
 	}
 }
@@ -158,6 +167,9 @@ func (s *sessionStore) get(id string) (reviewSession, error) {
 	s.prune()
 	session := s.sessions[id]
 	if session == nil {
+		if _, removed := s.removed[id]; removed {
+			return reviewSession{}, errSessionRemoved
+		}
 		return reviewSession{}, errSessionGone
 	}
 	return cloneSession(session), nil
@@ -174,9 +186,29 @@ func (s *sessionStore) list() []map[string]any {
 			"number": session.PR.Number, "title": session.PR.Title,
 			"headSHA": session.PR.HeadSHA, "baseSHA": session.PR.BaseSHA,
 			"updatedAt": session.UpdatedAt, "expiresAt": session.ExpiresAt,
+			"draftCommentCount": len(session.Draft.Comments),
 		})
 	}
 	return result
+}
+
+func (s *sessionStore) remove(id string) error {
+	s.mu.Lock()
+	defer s.mu.Unlock()
+	s.prune()
+	if _, removed := s.removed[id]; removed {
+		return nil
+	}
+	if s.sessions[id] == nil {
+		return errSessionGone
+	}
+	// Never evict a live tombstone: a background tab could otherwise reconnect.
+	if len(s.removed) >= maxRemovedSessions {
+		return errors.New("removed session limit reached; try again after older removals expire")
+	}
+	delete(s.sessions, id)
+	s.removed[id] = s.now().Add(removedSessionTTL)
+	return nil
 }
 
 func (s *sessionStore) close(id string) {
@@ -203,6 +235,9 @@ func (s *sessionStore) sync(id string, draft sessionDraft, selection *sessionSel
 	s.prune()
 	session := s.sessions[id]
 	if session == nil {
+		if _, removed := s.removed[id]; removed {
+			return reviewSession{}, errSessionRemoved
+		}
 		return reviewSession{}, errSessionGone
 	}
 	if err := validateSessionDraft(session.PR, draft); err != nil {
@@ -386,5 +421,31 @@ func (s *Server) closeSession(w http.ResponseWriter, r *http.Request) error {
 	}
 	s.sessions.close(input.ID)
 	jsonReply(w, map[string]bool{"closed": true})
+	return nil
+}
+
+func (s *Server) listSessions(w http.ResponseWriter, r *http.Request) error {
+	var input struct{}
+	if err := decode(r, &input); err != nil {
+		return err
+	}
+	jsonReply(w, map[string]any{"sessions": s.sessions.list()})
+	return nil
+}
+
+func (s *Server) removeSession(w http.ResponseWriter, r *http.Request) error {
+	var input struct {
+		ID string `json:"id"`
+	}
+	if err := decode(r, &input); err != nil {
+		return err
+	}
+	if input.ID == "" {
+		return errors.New("session id is required")
+	}
+	if err := s.sessions.remove(input.ID); err != nil {
+		return err
+	}
+	jsonReply(w, map[string]bool{"removed": true})
 	return nil
 }

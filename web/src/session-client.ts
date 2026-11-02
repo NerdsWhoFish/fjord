@@ -29,7 +29,7 @@ export interface ActionContext {
 }
 export interface SessionState {
   id?: string;
-  status: "connecting" | "connected" | "retrying" | "disabled";
+  status: "connecting" | "connected" | "retrying" | "disabled" | "disconnected";
   error?: string;
 }
 export interface SessionSnapshot {
@@ -99,6 +99,7 @@ export function startReviewSession({
   onError?: (error: unknown) => void;
 }) {
   let stopped = false;
+  let disconnected = false;
   let running = false;
   let retryRequested = false;
   let failures = 0;
@@ -110,7 +111,7 @@ export function startReviewSession({
   const completed = new Map<string, Acknowledgement>();
   const isCurrent = () => !stopped && !controller.signal.aborted;
   function schedule(delay: number) {
-    if (stopped) return;
+    if (stopped || disconnected) return;
     clearTimeout(timer);
     timer = setTimeout(() => {
       void poll();
@@ -209,6 +210,19 @@ export function startReviewSession({
       if (!isCurrent()) return;
       if (
         error instanceof SessionHTTPError &&
+        error.status === 410 &&
+        error.code === "session_removed"
+      ) {
+        disconnected = true;
+        sessionID = undefined;
+        pending.clear();
+        completed.clear();
+        lastActionError = undefined;
+        onState({ status: "disconnected", error: error.message });
+        return;
+      }
+      if (
+        error instanceof SessionHTTPError &&
         error.status === 404 &&
         error.code === "session_not_found"
       ) {
@@ -235,6 +249,7 @@ export function startReviewSession({
   void poll();
   return {
     retry() {
+      disconnected = false;
       failures = 0;
       if (running) retryRequested = true;
       else schedule(0);

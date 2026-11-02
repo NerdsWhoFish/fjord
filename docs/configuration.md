@@ -135,6 +135,8 @@ http://127.0.0.1:4727/mcp
 
 Settings shows the endpoint and browser connection state. Fjord does not need a model-provider API key.
 
+Choose **Settings > Manage review sessions** to see sessions, their last sync, and their IDs. Remove old sessions after confirming; your current tab is protected. Removal disconnects AI assistance and discards pending actions, while local browser drafts and GitHub comments remain intact. An affected open tab can use **Reconnect** in Settings. Removal markers last 24 hours; ordinary inactive sessions expire after two hours.
+
 Tools can read the review and pinned source, query language servers, show navigation results in the browser, and propose AI-attributed comment or suggestion drafts. They cannot submit reviews, reply on GitHub, run server commands, or edit source.
 
 Browser actions require a connected tab and return pending, applied, or failed delivery status. Drafts merge without replacing human edits. Sessions are revision-bound: reopen the PR after a new push. Restarting the service discards pending actions; drafts already applied in the browser remain in its session storage.
