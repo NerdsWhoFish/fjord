@@ -1,6 +1,7 @@
 /bin/
 /dist/
 /web/node_modules/
+/languages/node_modules/
 /web/dist/
 *.log
 .env

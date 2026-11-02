@@ -35,6 +35,24 @@ func TestDefaultProfilesMatchExistingLanguages(t *testing.T) {
 		{"main.tofu", "terraform", "opentofu"},
 		{"production.tfvars", "terraform-vars", "opentofu-vars"},
 		{"env/production.tfvars.json", "terraform-vars", "opentofu-vars"},
+		{".github/workflows/check.yaml", "yaml", "yaml"},
+		{"package.json", "json", "json"},
+		{"tsconfig.json", "jsonc", "jsonc"},
+		{"nested/tsconfig.build.json", "jsonc", "jsonc"},
+		{"config.jsonc", "jsonc", "jsonc"},
+		{"main.ts", "typescript", "typescript"},
+		{"main.mts", "typescript", "typescript"},
+		{"app.tsx", "typescript-react", "typescriptreact"},
+		{"index.js", "javascript", "javascript"},
+		{"app.jsx", "javascript-react", "javascriptreact"},
+		{"main.py", "python", "python"},
+		{"scripts/run.sh", "bash", "shellscript"},
+		{"Dockerfile", "dockerfile", "dockerfile"},
+		{"examples/Dockerfile.python", "dockerfile", "dockerfile"},
+		{"Containerfile", "dockerfile", "dockerfile"},
+		{"index.html", "html", "html"},
+		{"style.css", "css", "css"},
+		{"style.scss", "scss", "scss"},
 	} {
 		t.Run(test.path, func(t *testing.T) {
 			profile, ok := Match(profiles, test.path)
@@ -43,7 +61,7 @@ func TestDefaultProfilesMatchExistingLanguages(t *testing.T) {
 			}
 		})
 	}
-	for _, file := range []string{"README.md", "main.tofu.json", "a.tofuvars", ".terraform.lock.hcl", "main.tftest.hcl"} {
+	for _, file := range []string{"README.md", "a.tofuvars", ".terraform.lock.hcl", "main.tftest.hcl"} {
 		if _, ok := Match(profiles, file); ok {
 			t.Errorf("unexpected default for %s", file)
 		}
@@ -55,7 +73,7 @@ func TestDefaultProfilesMatchExistingLanguages(t *testing.T) {
 	if !reflect.DeepEqual(goProfile.InitializationOptions, map[string]any{"staticcheck": false, "checkBugReports": false, "telemetryPrompt": false, "hints": map[string]any{"parameterNames": true, "assignVariableTypes": true, "rangeVariableTypes": true}}) {
 		t.Fatal("lost safe Go initialization defaults")
 	}
-	for _, profile := range profiles[1:] {
+	for _, profile := range profiles[1:3] {
 		if !reflect.DeepEqual(profile.Command, []string{"tofu-ls", "serve"}) || profile.InitializationOptions["validation"].(map[string]any)["enableEnhancedValidation"] != false {
 			t.Fatalf("lost safe Terraform defaults: %+v", profile)
 		}
@@ -98,7 +116,11 @@ func TestExplicitProfilesReplaceDisableAndTakePriority(t *testing.T) {
 	for _, profile := range profiles {
 		names = append(names, profile.Name)
 	}
-	if !reflect.DeepEqual(names, []string{"a-custom", "go", "z-custom", "terraform-vars"}) {
+	wantNames := []string{"a-custom", "go", "z-custom", "terraform-vars"}
+	for _, p := range bundledProfiles() {
+		wantNames = append(wantNames, p.Name)
+	}
+	if !reflect.DeepEqual(names, wantNames) {
 		t.Fatalf("nondeterministic profile order: %v", names)
 	}
 	if profiles[1].Adapter != "" || profiles[1].RootRequired || len(profiles[1].RootMarkers) != 0 {
@@ -112,6 +134,34 @@ func TestExplicitProfilesReplaceDisableAndTakePriority(t *testing.T) {
 	}
 	if _, ok := Match(profiles, "main.tfvars"); !ok {
 		t.Fatal("unmentioned default was removed")
+	}
+}
+
+func TestBundledRuntimeConfiguration(t *testing.T) {
+	bundle := filepath.Join(t.TempDir(), "languages")
+	runtimePath := filepath.Join(t.TempDir(), "node-libs")
+	t.Setenv("FJORD_LANGUAGE_BUNDLE", bundle)
+	t.Setenv("FJORD_NODE_RUNTIME_PATHS", runtimePath)
+	profiles, err := Load("")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, p := range profiles[3:] {
+		if p.Command[0] != "node" || p.Command[1] != "--openssl-config=/dev/null" || p.Command[2] != "--max-old-space-size=512" || !strings.HasPrefix(p.Command[3], bundle+"/node_modules/") {
+			t.Fatalf("unsafe or nonrelocatable Node command: %+v", p)
+		}
+		if !reflect.DeepEqual(p.RuntimePaths, []string{bundle, runtimePath}) {
+			t.Fatalf("runtime paths: %v", p.RuntimePaths)
+		}
+	}
+	t.Setenv("FJORD_NODE_RUNTIME_PATHS", "/")
+	if _, err := Load(""); err == nil {
+		t.Fatal("broad Node runtime path accepted")
+	}
+	t.Setenv("FJORD_NODE_RUNTIME_PATHS", "")
+	t.Setenv("FJORD_LANGUAGE_BUNDLE", "../relative")
+	if _, err := Load(""); err == nil {
+		t.Fatal("relative bundle path accepted")
 	}
 }
 

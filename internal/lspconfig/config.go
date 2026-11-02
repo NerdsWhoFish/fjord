@@ -46,18 +46,20 @@ func Defaults() []Profile {
 			"validation":           map[string]any{"enableEnhancedValidation": false},
 		}
 	}
-	return []Profile{
+	profiles := []Profile{
 		{Name: "go", Command: []string{"gopls", "serve"}, Files: []string{"**/*.go"}, LanguageID: "go", RootMarkers: []string{"go.mod"}, RootRequired: true, Adapter: "go", InitializationOptions: map[string]any{"staticcheck": false, "checkBugReports": false, "telemetryPrompt": false, "hints": map[string]any{"parameterNames": true, "assignVariableTypes": true, "rangeVariableTypes": true}}},
 		{Name: "terraform", Command: []string{"tofu-ls", "serve"}, Files: []string{"**/*.tf", "**/*.tf.json", "**/*.tofu"}, LanguageID: "opentofu", Adapter: "generic", InitializationOptions: terraformOptions(), Environment: map[string]string{"TF_IN_AUTOMATION": "1", "CHECKPOINT_DISABLE": "1"}},
 		{Name: "terraform-vars", Command: []string{"tofu-ls", "serve"}, Files: []string{"**/*.tfvars", "**/*.tfvars.json"}, LanguageID: "opentofu-vars", Adapter: "generic", InitializationOptions: terraformOptions(), Environment: map[string]string{"TF_IN_AUTOMATION": "1", "CHECKPOINT_DISABLE": "1"}},
 	}
+	return append(profiles, bundledProfiles()...)
 }
 
 // Load reads only the supplied operator path. Named entries replace a default
 // profile completely; partial inheritance could retain surprising privileges.
 func Load(configPath string) ([]Profile, error) {
 	if configPath == "" {
-		return Defaults(), nil
+		profiles := Defaults()
+		return profiles, Validate(profiles)
 	}
 	file, err := os.Open(configPath)
 	if err != nil {
@@ -98,7 +100,7 @@ func parse(data []byte) ([]Profile, error) {
 		names = append(names, name)
 	}
 	sort.Strings(names)
-	profiles := make([]Profile, 0, len(names)+3)
+	profiles := make([]Profile, 0, len(names)+len(Defaults()))
 	for _, name := range names {
 		profile := config.LanguageServers[name]
 		profile.Name = name

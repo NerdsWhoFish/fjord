@@ -1,0 +1,8456 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "oneOf": [
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1.MutatingAdmissionPolicy"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "MutatingAdmissionPolicy"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1.MutatingAdmissionPolicyBinding"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "MutatingAdmissionPolicyBinding"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1.MutatingAdmissionPolicyBindingList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "MutatingAdmissionPolicyBindingList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1.MutatingAdmissionPolicyList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "MutatingAdmissionPolicyList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1.MutatingWebhookConfiguration"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "MutatingWebhookConfiguration"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1.MutatingWebhookConfigurationList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "MutatingWebhookConfigurationList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1.ValidatingAdmissionPolicy"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ValidatingAdmissionPolicy"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1.ValidatingAdmissionPolicyBinding"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ValidatingAdmissionPolicyBinding"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1.ValidatingAdmissionPolicyBindingList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ValidatingAdmissionPolicyBindingList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1.ValidatingAdmissionPolicyList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ValidatingAdmissionPolicyList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1.ValidatingWebhookConfiguration"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ValidatingWebhookConfiguration"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1.ValidatingWebhookConfigurationList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ValidatingWebhookConfigurationList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1alpha1.MutatingAdmissionPolicy"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "MutatingAdmissionPolicy"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1alpha1.MutatingAdmissionPolicyBinding"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "MutatingAdmissionPolicyBinding"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1alpha1.MutatingAdmissionPolicyBindingList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "MutatingAdmissionPolicyBindingList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1alpha1.MutatingAdmissionPolicyList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "MutatingAdmissionPolicyList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1beta1.MutatingAdmissionPolicy"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "MutatingAdmissionPolicy"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1beta1.MutatingAdmissionPolicyBinding"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "MutatingAdmissionPolicyBinding"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1beta1.MutatingAdmissionPolicyBindingList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "MutatingAdmissionPolicyBindingList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.admissionregistration.v1beta1.MutatingAdmissionPolicyList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "MutatingAdmissionPolicyList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.apiserverinternal.v1alpha1.StorageVersion"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "internal.apiserver.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "StorageVersion"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.apiserverinternal.v1alpha1.StorageVersionList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "internal.apiserver.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "StorageVersionList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.apps.v1.ControllerRevision"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apps/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ControllerRevision"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.apps.v1.ControllerRevisionList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apps/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ControllerRevisionList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.apps.v1.DaemonSet"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apps/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DaemonSet"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.apps.v1.DaemonSetList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apps/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DaemonSetList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.apps.v1.Deployment"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apps/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Deployment"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.apps.v1.DeploymentList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apps/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeploymentList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.apps.v1.ReplicaSet"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apps/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ReplicaSet"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.apps.v1.ReplicaSetList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apps/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ReplicaSetList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.apps.v1.StatefulSet"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apps/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "StatefulSet"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.apps.v1.StatefulSetList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apps/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "StatefulSetList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.authentication.v1.SelfSubjectReview"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "authentication.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "SelfSubjectReview"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.authentication.v1.TokenRequest"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "authentication.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "TokenRequest"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.authentication.v1.TokenReview"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "authentication.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "TokenReview"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.authorization.v1.LocalSubjectAccessReview"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "authorization.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "LocalSubjectAccessReview"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.authorization.v1.SelfSubjectAccessReview"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "authorization.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "SelfSubjectAccessReview"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.authorization.v1.SelfSubjectRulesReview"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "authorization.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "SelfSubjectRulesReview"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.authorization.v1.SubjectAccessReview"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "authorization.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "SubjectAccessReview"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.autoscaling.v1.HorizontalPodAutoscaler"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "autoscaling/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "HorizontalPodAutoscaler"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.autoscaling.v1.HorizontalPodAutoscalerList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "autoscaling/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "HorizontalPodAutoscalerList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.autoscaling.v1.Scale"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "autoscaling/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Scale"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.autoscaling.v2.HorizontalPodAutoscaler"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "autoscaling/v2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "HorizontalPodAutoscaler"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.autoscaling.v2.HorizontalPodAutoscalerList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "autoscaling/v2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "HorizontalPodAutoscalerList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.batch.v1.CronJob"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "batch/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "CronJob"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.batch.v1.CronJobList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "batch/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "CronJobList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.batch.v1.Job"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "batch/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Job"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.batch.v1.JobList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "batch/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "JobList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.certificates.v1.CertificateSigningRequest"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "certificates.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "CertificateSigningRequest"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.certificates.v1.CertificateSigningRequestList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "certificates.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "CertificateSigningRequestList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.certificates.v1.ClusterTrustBundle"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "certificates.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ClusterTrustBundle"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.certificates.v1.ClusterTrustBundleList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "certificates.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ClusterTrustBundleList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.certificates.v1.PodCertificateRequest"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "certificates.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PodCertificateRequest"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.certificates.v1.PodCertificateRequestList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "certificates.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PodCertificateRequestList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.certificates.v1beta1.ClusterTrustBundle"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "certificates.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ClusterTrustBundle"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.certificates.v1beta1.ClusterTrustBundleList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "certificates.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ClusterTrustBundleList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.certificates.v1beta1.PodCertificateRequest"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "certificates.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PodCertificateRequest"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.certificates.v1beta1.PodCertificateRequestList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "certificates.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PodCertificateRequestList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.coordination.v1.Lease"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "coordination.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Lease"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.coordination.v1.LeaseList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "coordination.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "LeaseList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.coordination.v1alpha2.LeaseCandidate"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "coordination.k8s.io/v1alpha2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "LeaseCandidate"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.coordination.v1alpha2.LeaseCandidateList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "coordination.k8s.io/v1alpha2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "LeaseCandidateList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.coordination.v1beta1.LeaseCandidate"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "coordination.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "LeaseCandidate"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.coordination.v1beta1.LeaseCandidateList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "coordination.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "LeaseCandidateList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.Binding"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Binding"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.ComponentStatus"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ComponentStatus"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.ComponentStatusList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ComponentStatusList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.ConfigMap"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ConfigMap"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.ConfigMapList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ConfigMapList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.Endpoints"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Endpoints"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.EndpointsList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "EndpointsList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.Event"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Event"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.EventList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "EventList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.LimitRange"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "LimitRange"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.LimitRangeList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "LimitRangeList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.Namespace"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Namespace"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.NamespaceList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "NamespaceList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.Node"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Node"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.NodeList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "NodeList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.PersistentVolume"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PersistentVolume"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.PersistentVolumeClaim"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PersistentVolumeClaim"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.PersistentVolumeClaimList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PersistentVolumeClaimList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.PersistentVolumeList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PersistentVolumeList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.Pod"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Pod"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.PodList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PodList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.PodTemplate"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PodTemplate"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.PodTemplateList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PodTemplateList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.ReplicationController"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ReplicationController"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.ReplicationControllerList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ReplicationControllerList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.ResourceQuota"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceQuota"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.ResourceQuotaList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceQuotaList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.Secret"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Secret"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.SecretList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "SecretList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.Service"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Service"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.ServiceAccount"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ServiceAccount"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.ServiceAccountList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ServiceAccountList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.core.v1.ServiceList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ServiceList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.discovery.v1.EndpointSlice"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "discovery.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "EndpointSlice"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.discovery.v1.EndpointSliceList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "discovery.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "EndpointSliceList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.events.v1.Event"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "events.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Event"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.events.v1.EventList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "events.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "EventList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.flowcontrol.v1.FlowSchema"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "flowcontrol.apiserver.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "FlowSchema"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.flowcontrol.v1.FlowSchemaList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "flowcontrol.apiserver.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "FlowSchemaList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.flowcontrol.v1.PriorityLevelConfiguration"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "flowcontrol.apiserver.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PriorityLevelConfiguration"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.flowcontrol.v1.PriorityLevelConfigurationList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "flowcontrol.apiserver.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PriorityLevelConfigurationList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.lifecycle.v1alpha1.Eviction"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "lifecycle.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Eviction"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.lifecycle.v1alpha1.EvictionList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "lifecycle.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "EvictionList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.lifecycle.v1alpha1.EvictionRequest"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "lifecycle.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "EvictionRequest"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.lifecycle.v1alpha1.EvictionRequestList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "lifecycle.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "EvictionRequestList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.networking.v1.IPAddress"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "networking.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "IPAddress"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.networking.v1.IPAddressList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "networking.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "IPAddressList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.networking.v1.Ingress"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "networking.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Ingress"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.networking.v1.IngressClass"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "networking.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "IngressClass"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.networking.v1.IngressClassList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "networking.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "IngressClassList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.networking.v1.IngressList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "networking.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "IngressList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.networking.v1.NetworkPolicy"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "networking.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "NetworkPolicy"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.networking.v1.NetworkPolicyList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "networking.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "NetworkPolicyList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.networking.v1.ServiceCIDR"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "networking.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ServiceCIDR"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.networking.v1.ServiceCIDRList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "networking.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ServiceCIDRList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.node.v1.RuntimeClass"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "node.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "RuntimeClass"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.node.v1.RuntimeClassList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "node.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "RuntimeClassList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.policy.v1.Eviction"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "policy/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Eviction"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.policy.v1.PodDisruptionBudget"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "policy/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PodDisruptionBudget"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.policy.v1.PodDisruptionBudgetList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "policy/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PodDisruptionBudgetList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.rbac.v1.ClusterRole"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "rbac.authorization.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ClusterRole"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.rbac.v1.ClusterRoleBinding"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "rbac.authorization.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ClusterRoleBinding"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.rbac.v1.ClusterRoleBindingList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "rbac.authorization.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ClusterRoleBindingList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.rbac.v1.ClusterRoleList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "rbac.authorization.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ClusterRoleList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.rbac.v1.Role"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "rbac.authorization.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Role"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.rbac.v1.RoleBinding"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "rbac.authorization.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "RoleBinding"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.rbac.v1.RoleBindingList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "rbac.authorization.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "RoleBindingList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.rbac.v1.RoleList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "rbac.authorization.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "RoleList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1.DeviceClass"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeviceClass"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1.DeviceClassList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeviceClassList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1.DeviceTaintRule"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeviceTaintRule"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1.DeviceTaintRuleList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeviceTaintRuleList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1.ResourceClaim"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceClaim"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1.ResourceClaimList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceClaimList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1.ResourceClaimTemplate"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceClaimTemplate"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1.ResourceClaimTemplateList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceClaimTemplateList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1.ResourceSlice"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceSlice"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1.ResourceSliceList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceSliceList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1alpha3.DeviceTaintRule"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1alpha3"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeviceTaintRule"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1alpha3.DeviceTaintRuleList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1alpha3"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeviceTaintRuleList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1alpha3.ResourcePoolStatusRequest"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1alpha3"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourcePoolStatusRequest"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1alpha3.ResourcePoolStatusRequestList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1alpha3"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourcePoolStatusRequestList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta1.DeviceClass"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeviceClass"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta1.DeviceClassList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeviceClassList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta1.ResourceClaim"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceClaim"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta1.ResourceClaimList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceClaimList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta1.ResourceClaimTemplate"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceClaimTemplate"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta1.ResourceClaimTemplateList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceClaimTemplateList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta1.ResourceSlice"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceSlice"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta1.ResourceSliceList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceSliceList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta2.DeviceClass"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeviceClass"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta2.DeviceClassList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeviceClassList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta2.DeviceTaintRule"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeviceTaintRule"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta2.DeviceTaintRuleList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeviceTaintRuleList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta2.ResourceClaim"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceClaim"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta2.ResourceClaimList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceClaimList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta2.ResourceClaimTemplate"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceClaimTemplate"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta2.ResourceClaimTemplateList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceClaimTemplateList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta2.ResourceSlice"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceSlice"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.resource.v1beta2.ResourceSliceList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "ResourceSliceList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.scheduling.v1.PriorityClass"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PriorityClass"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.scheduling.v1.PriorityClassList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PriorityClassList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.scheduling.v1alpha3.CompositePodGroup"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1alpha3"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "CompositePodGroup"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.scheduling.v1alpha3.CompositePodGroupList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1alpha3"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "CompositePodGroupList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.scheduling.v1alpha3.PodGroup"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1alpha3"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PodGroup"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.scheduling.v1alpha3.PodGroupList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1alpha3"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PodGroupList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.scheduling.v1alpha3.Workload"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1alpha3"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Workload"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.scheduling.v1alpha3.WorkloadList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1alpha3"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WorkloadList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.scheduling.v1beta1.PodGroup"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PodGroup"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.scheduling.v1beta1.PodGroupList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "PodGroupList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.scheduling.v1beta1.Workload"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Workload"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.scheduling.v1beta1.WorkloadList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WorkloadList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.storage.v1.CSIDriver"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "CSIDriver"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.storage.v1.CSIDriverList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "CSIDriverList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.storage.v1.CSINode"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "CSINode"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.storage.v1.CSINodeList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "CSINodeList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.storage.v1.CSIStorageCapacity"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "CSIStorageCapacity"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.storage.v1.CSIStorageCapacityList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "CSIStorageCapacityList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.storage.v1.StorageClass"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "StorageClass"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.storage.v1.StorageClassList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "StorageClassList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.storage.v1.VolumeAttachment"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "VolumeAttachment"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.storage.v1.VolumeAttachmentList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "VolumeAttachmentList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.storage.v1.VolumeAttributesClass"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "VolumeAttributesClass"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.storage.v1.VolumeAttributesClassList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "VolumeAttributesClassList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.storagemigration.v1.StorageVersionMigration"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storagemigration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "StorageVersionMigration"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.storagemigration.v1.StorageVersionMigrationList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storagemigration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "StorageVersionMigrationList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.storagemigration.v1beta1.StorageVersionMigration"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storagemigration.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "StorageVersionMigration"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.api.storagemigration.v1beta1.StorageVersionMigrationList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storagemigration.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "StorageVersionMigrationList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinition"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apiextensions.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "CustomResourceDefinition"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apiextensions-apiserver.pkg.apis.apiextensions.v1.CustomResourceDefinitionList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apiextensions.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "CustomResourceDefinitionList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.APIGroup"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "APIGroup"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.APIGroupList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "APIGroupList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.APIResourceList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "APIResourceList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.APIVersions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "APIVersions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admission.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admission.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apiextensions.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apiextensions.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apiregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apiregistration.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apps/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apps/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apps/v1beta2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "authentication.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "authentication.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "authentication.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "authorization.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "authorization.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "autoscaling/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "autoscaling/v2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "batch/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "batch/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "certificates.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "certificates.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "certificates.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "coordination.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "coordination.k8s.io/v1alpha2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "coordination.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "discovery.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "discovery.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "events.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "events.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "extensions/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "flowcontrol.apiserver.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "flowcontrol.apiserver.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "flowcontrol.apiserver.k8s.io/v1beta2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "flowcontrol.apiserver.k8s.io/v1beta3"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "imagepolicy.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "internal.apiserver.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "lifecycle.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "networking.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "networking.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "node.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "node.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "node.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "policy/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "policy/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "rbac.authorization.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "rbac.authorization.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "rbac.authorization.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1alpha3"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1alpha3"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storagemigration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.DeleteOptions"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storagemigration.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "DeleteOptions"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.Status"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "Status"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admission.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admission.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "admissionregistration.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apiextensions.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apiextensions.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apiregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apiregistration.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apps/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apps/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apps/v1beta2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "authentication.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "authentication.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "authentication.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "authorization.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "authorization.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "autoscaling/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "autoscaling/v2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "batch/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "batch/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "certificates.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "certificates.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "certificates.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "coordination.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "coordination.k8s.io/v1alpha2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "coordination.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "discovery.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "discovery.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "events.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "events.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "extensions/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "flowcontrol.apiserver.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "flowcontrol.apiserver.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "flowcontrol.apiserver.k8s.io/v1beta2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "flowcontrol.apiserver.k8s.io/v1beta3"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "imagepolicy.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "internal.apiserver.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "lifecycle.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "networking.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "networking.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "node.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "node.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "node.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "policy/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "policy/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "rbac.authorization.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "rbac.authorization.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "rbac.authorization.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1alpha3"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "resource.k8s.io/v1beta2"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1alpha3"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "scheduling.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1alpha1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storage.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storagemigration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.apimachinery.pkg.apis.meta.v1.WatchEvent"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "storagemigration.k8s.io/v1beta1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "WatchEvent"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.kube-aggregator.pkg.apis.apiregistration.v1.APIService"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apiregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "APIService"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    },
+    {
+      "allOf": [
+        {
+          "$ref": "_definitions.json#/definitions/io.k8s.kube-aggregator.pkg.apis.apiregistration.v1.APIServiceList"
+        },
+        {
+          "properties": {
+            "apiVersion": {
+              "enum": [
+                "apiregistration.k8s.io/v1"
+              ]
+            },
+            "kind": {
+              "enum": [
+                "APIServiceList"
+              ]
+            }
+          },
+          "required": [
+            "apiVersion",
+            "kind"
+          ],
+          "type": "object"
+        }
+      ]
+    }
+  ],
+  "title": "Kubernetes v1.37.0 resources"
+}

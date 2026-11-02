@@ -1,16 +1,16 @@
 languageServers:
   python:
     command:
-      - /opt/lsp/node
+      - node
       - --openssl-config=/dev/null
-      - /opt/lsp/node_modules/pyright/dist/pyright-langserver.js
+      - /opt/fjord/languages/node_modules/pyright/langserver.index.js
       - --stdio
     files: ["**/*.py", "**/*.pyi"]
     languageId: python
     rootMarkers: [pyproject.toml, pyrightconfig.json, setup.py]
-    runtimePaths: [/opt/lsp]
+    runtimePaths: [/opt/fjord/languages]
     settings:
       python:
         analysis:
-          typeCheckingMode: basic
+          typeCheckingMode: strict
           diagnosticMode: openFilesOnly
