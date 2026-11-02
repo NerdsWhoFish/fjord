@@ -1,0 +1,104 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["image", "publicURL", "github", "sandbox", "service", "ingress", "resources", "temporaryStorage", "languageServers", "goModuleCache", "telemetry"],
+  "properties": {
+    "nameOverride": { "type": "string", "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" },
+    "fullnameOverride": { "type": "string", "pattern": "^$|^[a-z0-9]([-a-z0-9]*[a-z0-9])?$" },
+    "image": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["repository", "tag", "digest", "pullPolicy"],
+      "properties": {
+        "repository": { "type": "string", "minLength": 1 },
+        "tag": { "type": "string" },
+        "digest": { "type": "string", "pattern": "^$|^sha256:[a-f0-9]{64}$" },
+        "pullPolicy": { "enum": ["Always", "IfNotPresent", "Never"] }
+      }
+    },
+    "imagePullSecrets": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["name"],
+        "additionalProperties": false,
+        "properties": { "name": { "type": "string", "minLength": 1 } }
+      }
+    },
+    "publicURL": { "type": "string", "pattern": "^https?://[^/]+/?$" },
+    "github": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["existingSecret", "tokenKey"],
+      "properties": {
+        "existingSecret": { "type": "string", "minLength": 1 },
+        "tokenKey": { "type": "string", "minLength": 1 }
+      }
+    },
+    "sandbox": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["seccompProfile"],
+      "properties": {
+        "seccompProfile": { "type": "string", "pattern": "^[a-zA-Z0-9_-]+(/[a-zA-Z0-9_-]+)*\\.json$" }
+      }
+    },
+    "service": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["port"],
+      "properties": { "port": { "type": "integer", "minimum": 1, "maximum": 65535 } }
+    },
+    "ingress": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["enabled", "className", "annotations", "tlsSecretName"],
+      "properties": {
+        "enabled": { "type": "boolean" },
+        "className": { "type": "string" },
+        "annotations": { "type": "object", "additionalProperties": { "type": "string" } },
+        "tlsSecretName": { "type": "string" }
+      }
+    },
+    "resources": { "type": "object" },
+    "temporaryStorage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["sizeLimit"],
+      "properties": { "sizeLimit": { "type": "string", "minLength": 1 } }
+    },
+    "languageServers": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["existingConfigMap", "configKey"],
+      "properties": {
+        "existingConfigMap": { "type": "string" },
+        "configKey": { "type": "string", "minLength": 1 }
+      }
+    },
+    "goModuleCache": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["existingClaim"],
+      "properties": { "existingClaim": { "type": "string" } }
+    },
+    "telemetry": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["environment", "otlpEndpoint", "existingSecret", "headersKey", "faroURL"],
+      "properties": {
+        "environment": { "type": "string", "minLength": 1 },
+        "otlpEndpoint": { "type": "string" },
+        "existingSecret": { "type": "string" },
+        "headersKey": { "type": "string", "minLength": 1 },
+        "faroURL": { "type": "string" }
+      }
+    },
+    "podAnnotations": { "type": "object", "additionalProperties": { "type": "string" } },
+    "nodeSelector": { "type": "object", "additionalProperties": { "type": "string" } },
+    "tolerations": { "type": "array", "items": { "type": "object" } },
+    "affinity": { "type": "object" },
+    "global": { "type": "object" }
+  }
+}

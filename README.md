@@ -63,6 +63,7 @@ Select code, write Markdown, and preview a suggestion before adding it to your r
 
 ## More
 
+- [Helm installation](docs/kubernetes.md): install from `https://charts.nerdswhofish.com`, with sandbox prerequisites and example values.
 - [Configuration and deployment](docs/configuration.md): containers, reverse proxies, private Go dependencies, BYO servers, and troubleshooting.
 - [MCP setup](docs/configuration.md#mcp-assistance): connect your AI client to `http://127.0.0.1:4727/mcp`. AI changes remain drafts for you to review.
 - [Chrome extension](extension/README.md): redirect GitHub's changes page to `fjord.stout.zone`.

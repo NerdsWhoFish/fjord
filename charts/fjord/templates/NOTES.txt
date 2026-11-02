@@ -1,0 +1,15 @@
+Fjord is configured for {{ .Values.publicURL }}.
+
+Before starting:
+  - Secret {{ .Values.github.existingSecret }} must contain key {{ .Values.github.tokenKey }}.
+  - Every eligible node must support pod user namespaces and have the scoped
+    seccomp profile {{ .Values.sandbox.seccompProfile }} installed.
+
+Fjord has no login. Restrict access to trusted users or use an authenticating proxy.
+Review sessions are held in memory and do not survive restarts.
+
+{{ if not .Values.ingress.enabled -}}
+For the default publicURL, access through:
+  kubectl -n {{ .Release.Namespace }} port-forward svc/{{ include "fjord.fullname" . }} 4727:{{ .Values.service.port }}
+  http://localhost:4727
+{{ end }}

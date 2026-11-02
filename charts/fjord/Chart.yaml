@@ -1,0 +1,15 @@
+apiVersion: v2
+name: fjord
+description: GitHub pull request review with sandboxed language servers and MCP assistance.
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+kubeVersion: ">=1.33.0-0"
+home: https://github.com/NerdsWhoFish/fjord
+sources:
+  - https://github.com/NerdsWhoFish/fjord
+keywords:
+  - github
+  - code-review
+  - language-server
+  - mcp

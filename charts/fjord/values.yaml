@@ -1,0 +1,61 @@
+nameOverride: ""
+fullnameOverride: ""
+
+image:
+  repository: ghcr.io/nerdswhofish/fjord
+  # Defaults to Chart.appVersion. A digest takes precedence over the tag.
+  tag: ""
+  digest: ""
+  pullPolicy: IfNotPresent
+imagePullSecrets: []
+
+# Must match the browser-facing origin, including a nonstandard port.
+publicURL: http://localhost:4727
+github:
+  existingSecret: fjord-github
+  tokenKey: token
+
+sandbox:
+  # Install this profile on every eligible node before deploying.
+  seccompProfile: profiles/fjord.json
+
+service:
+  port: 4727
+ingress:
+  enabled: false
+  className: ""
+  annotations: {}
+  # Host is derived from publicURL. Set publicURL to your HTTPS origin.
+  tlsSecretName: ""
+
+resources:
+  requests:
+    cpu: 250m
+    memory: 512Mi
+    ephemeral-storage: 1Gi
+  limits:
+    cpu: "4"
+    memory: 4Gi
+    ephemeral-storage: 8Gi
+temporaryStorage:
+  sizeLimit: 6Gi
+
+languageServers:
+  existingConfigMap: ""
+  configKey: language-servers.yaml
+goModuleCache:
+  # Optional prepopulated PVC mounted read-only for private/offline dependencies.
+  # This does not persist review sessions or workspace state.
+  existingClaim: ""
+
+telemetry:
+  environment: production
+  otlpEndpoint: ""
+  existingSecret: ""
+  headersKey: headers
+  faroURL: ""
+
+podAnnotations: {}
+nodeSelector: {}
+tolerations: []
+affinity: {}

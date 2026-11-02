@@ -32,6 +32,8 @@ jobs:
   release:
     needs: check
     runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.quill.outputs.version }}
     permissions:
       contents: write
       packages: write
@@ -61,6 +63,7 @@ jobs:
           FJORD_EXTENSION_SIGNING_KEY: ${{ secrets.FJORD_EXTENSION_SIGNING_KEY }}
         run: node scripts/prepare-extension-key.mjs
       - name: Cut release with Quill
+        id: quill
         uses: NerdsWhoFish/quill@v1
         with:
           scope: ${{ inputs.scope }}
@@ -87,3 +90,13 @@ jobs:
       - name: Remove extension signing key
         if: always()
         run: node scripts/prepare-extension-key.mjs --cleanup
+
+  chart:
+    needs: release
+    if: ${{ !inputs.dry-run }}
+    uses: ./.github/workflows/publish-chart.yml
+    with:
+      release-tag: ${{ needs.release.outputs.version }}
+    secrets:
+      HELM_APP_ID: ${{ secrets.HELM_APP_ID }}
+      HELM_APP_PRIVATE_KEY: ${{ secrets.HELM_APP_PRIVATE_KEY }}
