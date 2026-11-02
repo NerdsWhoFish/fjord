@@ -9,6 +9,9 @@ Go and Terraform navigation work out of the box; operator-defined language serve
 
 ## Run
 
+Published binaries, container images, and signed Chrome extension packages use the [Quill release workflow](docs/releases.md).
+The extension also ships as a ZIP for Chrome's local **Load unpacked** installation.
+
 Requirements: Go 1.27+, Node.js 22+, GitHub CLI, and `gopls` for Go navigation or `tofu-ls` for Terraform navigation on `PATH`.
 Navigation requires macOS `sandbox-exec` or Linux Bubblewrap (`bwrap` with user namespaces enabled).
 Fjord refuses to run an unconfined language server.
@@ -65,7 +68,14 @@ Make targets disable inherited Go workspaces.
 - Read regular PR conversation and submitted review decisions in the review dialog.
 - Read line-level review threads directly beside their code and reply inline.
 - Choose unified or split diffs in Settings; the preference persists across refreshes.
+- Read GitHub-flavored Markdown and sanitized HTML in conversation, with Write/Preview tabs for review text.
+- View unchanged renamed files and bounded reconstructed text diffs when GitHub omits a patch.
 - Connect an MCP client to inspect the open review, follow code, and propose attributed comment or suggestion drafts.
+
+Reconstructed views use the pinned revisions and remain read-only because GitHub did not provide comment anchors.
+They support navigation and syntax highlighting; use the review summary for feedback.
+The fallback is limited to 256 KiB and 2,000 lines per side, with separate messages for binary, oversized, and temporarily unavailable content.
+Successful review submission returns to the GitHub PR; failures keep the draft in Fjord.
 
 GitHub can receive a push after the freshness check.
 Branch protection remains responsible for dismissing stale approvals.

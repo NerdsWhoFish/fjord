@@ -45,9 +45,3 @@
   min-width: 0;
   width: auto;
 }
-@media (max-width: 700px) {
-  .header-actions .settings-panel {
-    left: 0;
-    right: auto;
-  }
-}

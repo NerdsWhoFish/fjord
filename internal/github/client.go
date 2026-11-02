@@ -24,6 +24,9 @@ const maxFile = 2 << 20
 const pageSize = 100
 const maxItems = 3000
 
+var ErrResponseTooLarge = errors.New("GitHub response exceeds the supported size limit")
+var ErrBinarySource = errors.New("binary files cannot be displayed as source")
+
 type Client struct {
 	token   func(context.Context) (string, error)
 	http    *http.Client
@@ -125,7 +128,7 @@ func (c *Client) request(ctx context.Context, method, endpoint string, input any
 		if method == http.MethodPost {
 			return fail(&UncertainWriteError{})
 		}
-		return fail(errors.New("GitHub response exceeds the supported size limit"))
+		return fail(ErrResponseTooLarge)
 	}
 	return data, resp.Header, nil
 }
@@ -214,7 +217,12 @@ func (c *Client) Load(ctx context.Context, owner, repo string, number int) (PR, 
 			if patchBytes > maxResponse {
 				return PR{}, errors.New("pull request diff exceeds the 16 MiB review limit; review it on GitHub")
 			}
-			files = append(files, File{Path: entry.Filename, PreviousPath: entry.PreviousFilename, Status: entry.Status, Additions: entry.Additions, Deletions: entry.Deletions, Patch: entry.Patch})
+			file := File{Path: entry.Filename, PreviousPath: entry.PreviousFilename, Status: entry.Status, Additions: entry.Additions, Deletions: entry.Deletions, Patch: entry.Patch}
+			if entry.Patch == "" {
+				reviewable := false
+				file.Reviewable = &reviewable
+			}
+			files = append(files, file)
 		}
 		if len(files) > maxItems {
 			return PR{}, errors.New("pull request file list exceeds the supported limit")
@@ -274,7 +282,7 @@ func (c *Client) Content(ctx context.Context, owner, repo, sha, path string) (st
 		return "", err
 	}
 	if bytes.IndexByte(data, 0) >= 0 || !utf8.Valid(data) {
-		return "", errors.New("binary files cannot be displayed as source")
+		return "", ErrBinarySource
 	}
 	return string(data), nil
 }

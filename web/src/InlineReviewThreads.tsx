@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { ReviewThread } from "./diff-layout";
 import type { DraftComment } from "./types";
+import { MarkdownContent } from "./MarkdownContent";
+import { MarkdownEditor } from "./MarkdownEditor";
 
 export function InlineDraftComments({
   drafts,
@@ -24,7 +26,7 @@ export function InlineDraftComments({
               ? `lines ${draft.startLine}-${draft.line}`
               : `line ${draft.line}`}
           </header>
-          <p>{draft.body}</p>
+          <MarkdownContent>{draft.body}</MarkdownContent>
           {onReviewDrafts && (
             <button type="button" onClick={onReviewDrafts}>
               Edit draft
@@ -78,7 +80,7 @@ function InlineThread({
       {thread.comments.map((comment) => (
         <article key={comment.id}>
           <strong>{comment.author}</strong>
-          <p>{comment.body}</p>
+          <MarkdownContent>{comment.body}</MarkdownContent>
         </article>
       ))}
       {onReply && !editing && (
@@ -108,16 +110,18 @@ function InlineThread({
               .finally(() => setBusy(false));
           }}
         >
-          <label>
+          <label htmlFor={`inline-reply-${root.id}`}>
             Reply to {root.author}
-            <textarea
-              value={body}
-              onChange={(event) => setBody(event.target.value)}
-              disabled={busy}
-              rows={3}
-              required
-            />
           </label>
+          <MarkdownEditor
+            id={`inline-reply-${root.id}`}
+            label={`Reply to ${root.author}`}
+            value={body}
+            onChange={(event) => setBody(event.target.value)}
+            disabled={busy}
+            rows={3}
+            required
+          />
           {error && <p role="alert">{error}</p>}
           <div className="inline-thread-actions">
             <button type="submit" disabled={busy || !body.trim()}>

@@ -18,6 +18,8 @@ import java from "refractor/java";
 import cpp from "refractor/cpp";
 import csharp from "refractor/csharp";
 import swift from "refractor/swift";
+import { languageFor } from "./syntax-language";
+export { languageFor } from "./syntax-language";
 import type { Element, Text } from "hast";
 import type {
   HighlightSpan,
@@ -49,47 +51,6 @@ for (const grammar of [
 ])
   refractor.register(grammar);
 
-const extensions: Record<string, string> = {
-  go: "go",
-  js: "javascript",
-  mjs: "javascript",
-  cjs: "javascript",
-  ts: "typescript",
-  mts: "typescript",
-  cts: "typescript",
-  jsx: "jsx",
-  tsx: "tsx",
-  py: "python",
-  sh: "bash",
-  bash: "bash",
-  zsh: "bash",
-  json: "json",
-  yaml: "yaml",
-  yml: "yaml",
-  tf: "hcl",
-  tfvars: "hcl",
-  hcl: "hcl",
-  md: "markdown",
-  markdown: "markdown",
-  css: "css",
-  html: "markup",
-  htm: "markup",
-  xml: "markup",
-  svg: "markup",
-  sql: "sql",
-  rs: "rust",
-  rb: "ruby",
-  toml: "toml",
-  java: "java",
-  c: "c",
-  h: "c",
-  cpp: "cpp",
-  cc: "cpp",
-  cxx: "cpp",
-  hpp: "cpp",
-  cs: "csharp",
-  swift: "swift",
-};
 const kinds: Record<string, SyntaxKind> = {
   comment: "comment",
   prolog: "comment",
@@ -117,13 +78,6 @@ const kinds: Record<string, SyntaxKind> = {
   tag: "tag",
   selector: "tag",
 };
-
-export function languageFor(path: string): string | undefined {
-  const name = path.split("/").at(-1)?.toLowerCase() || "";
-  if (name === "dockerfile" || name.startsWith("dockerfile.")) return "docker";
-  if (name === "gemfile" || name === "rakefile") return "ruby";
-  return extensions[name.split(".").at(-1) || ""];
-}
 
 function highlight(code: string, language: string): HighlightSpan[][] {
   const rows: HighlightSpan[][] = [[]];

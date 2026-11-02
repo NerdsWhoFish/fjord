@@ -126,7 +126,7 @@ describe("inline review threads", () => {
       />,
     );
     expect(markup).toContain("Review thread on base lines 3-5");
-    expect(markup).toContain("&lt;script&gt;");
+    expect(markup).not.toContain("bad()");
     expect(markup).not.toContain("<script>");
     expect(markup).toContain(">Reply</button>");
   });
