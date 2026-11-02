@@ -26,6 +26,7 @@ R2 credentials stay in that repository.
 
 Fjord uses `HELM_APP_ID` and `HELM_APP_PRIVATE_KEY` Actions secrets to mint a short-lived token limited to the Helm repository.
 The **Publish Helm chart** workflow can also publish an existing application release from `main`, or retry chart publication without releasing the application again.
+It packages chart source from the selected release tag; the explicit bootstrap option uses current chart source only for `v1.0.0`, which predates the chart.
 Existing chart versions cannot be replaced with different contents; chart changes require a new version.
 Dry-run releases do not submit charts.
 

@@ -6,6 +6,9 @@ on:
       release-tag:
         required: true
         type: string
+      bootstrap:
+        default: false
+        type: boolean
     secrets:
       HELM_APP_ID:
         required: true
@@ -18,6 +21,10 @@ on:
         required: true
         default: v1.0.0
         type: string
+      bootstrap:
+        description: Use current chart for v1.0.0, which predates chart source
+        default: false
+        type: boolean
 
 permissions:
   contents: read
@@ -48,6 +55,7 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
           RELEASE_TAG: ${{ inputs.release-tag }}
+          BOOTSTRAP: ${{ inputs.bootstrap }}
         shell: bash
         run: |
           set -euo pipefail
@@ -56,8 +64,21 @@ jobs:
             exit 1
           }
           gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft' | grep -qx false
+          git fetch --depth=1 origin "refs/tags/$RELEASE_TAG"
+          source="$RUNNER_TEMP/chart-source"
+          mkdir -p "$source"
+          if git cat-file -e FETCH_HEAD:charts/fjord/Chart.yaml 2>/dev/null; then
+            git archive FETCH_HEAD charts/fjord | tar -x -C "$source"
+            source="$source/charts/fjord"
+          elif [[ "$BOOTSTRAP" == true && "$RELEASE_TAG" == v1.0.0 ]]; then
+            source=charts/fjord
+          else
+            echo "::error::The selected release has no chart source"
+            exit 1
+          fi
           version="${RELEASE_TAG#v}"
-          helm package charts/fjord --version "$version" --app-version "$version" --destination artifacts
+          helm lint "$source" --strict
+          helm package "$source" --version "$version" --app-version "$version" --destination artifacts
           echo "path=artifacts/fjord-$version.tgz" >> "$GITHUB_OUTPUT"
       - name: Submit package to the Helm repository
         uses: NerdsWhoFish/helm-charts/publish@590c20f94ad38343435c0fdd1dde8832029e535a
