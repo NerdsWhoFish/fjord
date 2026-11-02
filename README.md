@@ -1,336 +1,71 @@
 # Fjord
 
-Review GitHub pull requests with semantic code navigation and MCP assistance from your preferred AI client.
+A GitHub PR review UI with language-server navigation. Follow the code, leave comments, and submit your review without losing your place.
 
-Keep the diff, surrounding code, and your review together.
-Follow symbols to their definitions or implementations, inspect references, and submit reviews to GitHub.
-This is an early local application.
-The container includes Go, OpenTofu/Terraform, YAML, JSON/JSONC, JavaScript/TypeScript, Python, Bash, Dockerfile, HTML, and CSS/SCSS language servers. Operator-defined profiles add or replace servers.
+![Fjord's Dracula theme with a file tree, highlighted diff, and automatic file outline](docs/screenshots/review.png)
 
-## Run
+## What you get
 
-Published binaries, container images, and signed Chrome extension packages use the [Quill release workflow](docs/releases.md).
-The extension also ships as a ZIP for Chrome's local **Load unpacked** installation.
+- Unified or split diffs, expandable context, inline threads, and multiline suggestions.
+- Definitions and references in one **Go to** menu, plus implementations, call hierarchies, diagnostics, and symbol search.
+- GitHub review decisions, Markdown previews, and Light, Dark, and Dracula themes.
+- Bundled language servers for Go, Terraform/OpenTofu, JS/TS, Python, YAML, JSON, Bash, Dockerfiles, HTML, and CSS/SCSS.
+- Offline Kubernetes, GitHub Actions, and TypeScript configuration schemas. Bring your own servers or connect an AI client through MCP.
 
-Requirements: Go 1.27+, Node.js 22.22.2+, GitHub CLI, and `gopls` for Go navigation or `tofu-ls` for Terraform navigation on `PATH`.
-Navigation requires macOS `sandbox-exec` or Linux Bubblewrap (`bwrap` with user namespaces enabled).
-Fjord refuses to run an unconfined language server.
+## Quick start
+
+Install **Go 1.27.3+**, **Node.js 22.22.2+**, and the **GitHub CLI**.
+Use macOS with `sandbox-exec`, or Linux with Bubblewrap and unprivileged user namespaces enabled.
 
 ```sh
+git clone https://github.com/NerdsWhoFish/fjord.git
+cd fjord
 gh auth login --hostname github.com
-sh scripts/install-language-servers.sh
+
+GOBIN="$PWD/bin" sh scripts/install-language-servers.sh
 sh scripts/install-node-language-servers.sh
+export PATH="$PWD/bin:$PATH"
 export FJORD_LANGUAGE_BUNDLE="$PWD/languages"
+
 make build
 ./bin/fjord
 ```
 
-Open the loopback URL printed by the CLI, normally `http://127.0.0.1:4727`, and paste a GitHub PR URL.
-The demo explores the UI without accessing GitHub and cannot submit reviews.
-`-addr 127.0.0.1:4728` selects another local port.
+Open <http://127.0.0.1:4727> and paste a PR URL. Homebrew Node installations may need [additional runtime paths](docs/configuration.md#native-node-runtimes).
 
-To browse from another device on a trusted LAN, bind all interfaces and specify the server IP or hostname used in your browser:
+For another device on your trusted LAN:
 
 ```sh
 ./bin/fjord -addr 0.0.0.0:4727 -host 192.168.1.10
 ```
 
-Replace the example IP with your server's LAN address, then open the printed URL.
-There is no Fjord login; connected users act through the server's GitHub CLI identity.
+Replace the IP with your server's address. **There is no application login; everyone connected uses the server's GitHub identity.**
 
-Direct links open a review on page load:
+## Review a PR
 
-```text
-http://127.0.0.1:4727/spacelift-solutions/demo/229
-http://127.0.0.1:4727/?owner=spacelift-solutions&repo=demo&number=229
-http://127.0.0.1:4727/?pr=https://github.com/spacelift-solutions/demo/pull/229
-```
+1. Paste a GitHub PR URL, or open `http://127.0.0.1:4727/owner/repo/123`.
+2. Pick a file or scroll through the diff. Hover or click a symbol, then choose **Go to**.
+3. Click a line number, or drag across several, to comment. Use **Insert suggestion** for replacement code.
+4. Choose **Add to review**, then **Comment**, **Approve**, or **Request changes** under the PR title. Check the summary and submit; Fjord returns you to GitHub.
+5. Use **Settings** for themes and split/unified diffs. Search workspace symbols with **Ctrl/Cmd+K**.
 
-Successful loads normalize to `/owner/repo/number`. Refresh and browser back/forward preserve the selected PR.
-To serve behind a TLS reverse proxy, explicitly configure the public origin:
+### Follow symbols
 
-```sh
-./bin/fjord -addr 0.0.0.0:4727 -public-url https://fjord.stout.zone
-```
+Definitions appear above references. Open any result in the source pane, including unchanged files.
 
-`FJORD_PUBLIC_URL` is the equivalent environment setting. Use either `-public-url` or `-host`.
-The proxy must preserve the configured Host header. Fjord does not infer trust from forwarded headers.
-This configures routing; it does not provision DNS, TLS, or a public deployment.
+![Go to shows a definition and references inside the review](docs/screenshots/navigation.png)
 
-`make check` requires the installed Go and Node language servers and runs frontend tests/build, Go vet, race tests, real sandboxed language-server integration tests, and formatting checks.
-`make install` checks and installs the embedded native application to `~/bin/fjord`.
-Make targets disable inherited Go workspaces.
+### Suggest changes
 
-## Review workflow
+Select code, write Markdown, and preview a suggestion before adding it to your review.
 
-- Load PR metadata and paginated file diffs using your GitHub CLI identity.
-- Read code at exact revisions. Deleted lines use the merge base; renamed files use their previous path on the left side.
-- Follow symbols using contextual definition, reference, and type-information actions in isolated revision workspaces. Go also supports implementation navigation.
-- Draft single-line or multiline comments and explicitly submit a comment review, approval, or request for changes. Submission checks the head and merge-base SHAs and pins GitHub's `commit_id` to the reviewed head.
-- Read regular PR conversation and submitted review decisions in the review dialog.
-- Read line-level review threads directly beside their code and reply inline.
-- Choose unified or split diffs in Settings; the preference persists across refreshes.
-- Read GitHub-flavored Markdown and sanitized HTML in conversation, with Write/Preview tabs for review text.
-- View unchanged renamed files and bounded reconstructed text diffs when GitHub omits a patch.
-- Connect an MCP client to inspect the open review, follow code, and propose attributed comment or suggestion drafts.
+![The comment editor with selected code and a GitHub suggestion](docs/screenshots/suggestion.png)
 
-Reconstructed views use the pinned revisions and remain read-only because GitHub did not provide comment anchors.
-They support navigation and syntax highlighting; use the review summary for feedback.
-The fallback is limited to 256 KiB and 2,000 lines per side, with separate messages for binary, oversized, and temporarily unavailable content.
-Successful review submission returns to the GitHub PR; failures keep the draft in Fjord.
+## More
 
-GitHub can receive a push after the freshness check.
-Branch protection remains responsible for dismissing stale approvals.
-GitHub remains the source of truth.
+- [Configuration and deployment](docs/configuration.md): containers, reverse proxies, private Go dependencies, BYO servers, and troubleshooting.
+- [MCP setup](docs/configuration.md#mcp-assistance): connect your AI client to `http://127.0.0.1:4727/mcp`. AI changes remain drafts for you to review.
+- [Chrome extension](extension/README.md): redirect GitHub's changes page to `fjord.stout.zone`.
+- [Release packaging](docs/releases.md) and [language-server bundle](languages/README.md).
 
-Hover or activate a symbol to open its code actions.
-Choose **Go to** to look up definitions and references together. The same popup shows definitions first, followed by references.
-Targets can be unchanged files anywhere in the extracted revision and open in the source pane without adding them to the changed-file list.
-Use the line-number gutter to select a line or drag a range, then choose the comment action.
-Shift-click extends a selection without dragging.
-Multiline comments stay on one side within one diff hunk; ranges cannot span omitted code.
-Choose **Add to review**, then select **Comment**, **Approve**, or **Request changes** below the PR title.
-The review dialog contains the editable summary, decision, draft comments, and existing conversation.
-Closing it preserves drafts; only its final submit button sends the review to GitHub.
-The larger comment editor syntax-highlights the selected code and accepts Markdown.
-Use **Insert suggestion** on head-side lines to insert a GitHub suggestion block prefilled with the selected code, then edit the replacement before adding it to your review.
-The hamburger **Settings** menu contains the **Theme** selector, offering System, Light, Dark, and Dracula.
-System follows your OS preference; an explicit choice is remembered and synchronized across browser tabs.
-
-Changed files appear in an expandable folder tree with status icons, full-path tooltips, and viewed markers.
-Search matches current and previous paths, and the filter menu supports change status and unviewed files.
-The diff area scrolls through all changed files; selecting a tree entry jumps to that file.
-Use the context controls to reveal omitted lines above, below, or between hunks in increments of 20.
-Expanded context supports semantic navigation, while review comments remain limited to GitHub's original diff lines.
-Navigation results replace the actions in the symbol popup; choose a destination there or return to its actions with Back.
-The source pane remains available for further symbol navigation from each destination.
-The sidebar follows the file at the top of the scrolling diff, and each file header has its own Viewed checkbox.
-Context controls include directional arrows and check the source before offering more lines below the final hunk.
-The PR title links to GitHub and includes the PR number; repository details appear once in the main heading.
-The right sidebar automatically loads the active file's outline and follows opened source files at their exact revision.
-Use **Search symbols** in the heading or Ctrl/Cmd+K to find declarations across the workspace.
-
-Diffs and source panes include syntax highlighting for Go, JavaScript/TypeScript and JSX/TSX, Terraform/HCL, Python, shell, JSON, YAML, HTML/XML, CSS, Markdown, SQL, Rust, Ruby, Java, C/C++, C#, Swift, Dockerfiles, and TOML.
-Highlighting preserves symbol-click positions and runs in a disposable browser worker.
-Unknown formats remain plain text; inputs over 250,000 characters or expensive grammars also fall back to plain text so review controls remain responsive.
-Diff highlighting uses separate base/head text within each hunk; omitted context can limit grammar accuracy, while full source provides continuous lexical context.
-Syntax colors do not imply language-server support: semantic actions depend on the configured server's capabilities.
-
-## Bring your own language server
-
-Pass `-config /path/to/language-servers.yaml` or set `FJORD_CONFIG` to an operator-owned YAML file.
-Fjord reads it at startup, never from the reviewed repository. Restart after changes.
-The [Python example](examples/language-servers.yaml) changes bundled Pyright to strict type checking through an explicit Node executable.
-All built-in profiles remain available unless replaced or disabled.
-
-```yaml
-languageServers:
-  python:
-    command: [node, --openssl-config=/dev/null, /opt/fjord/languages/node_modules/pyright/langserver.index.js, --stdio]
-    files: ["**/*.py", "**/*.pyi"]
-    languageId: python
-    rootMarkers: [pyproject.toml, pyrightconfig.json, setup.py]
-    runtimePaths: [/opt/fjord/languages]
-    settings:
-      python:
-        analysis:
-          typeCheckingMode: strict
-```
-
-Profiles support these fields:
-
-| Field | Purpose |
-| --- | --- |
-| `command` | Executable and literal arguments, with no shell expansion. Use an explicit interpreter for scripts. |
-| `files` | Repository-relative globs with `*`, `?`, and whole-directory `**`; first matching profile wins. |
-| `languageId` | LSP document language identifier. |
-| `rootMarkers` | Basenames used to find the nearest project root, falling back to the revision root. |
-| `rootRequired` | Fail if none of the root markers exist. |
-| `initializationOptions` | Server-specific options sent with `initialize`. |
-| `settings` | Server configuration sent after initialization and returned for configuration requests. |
-| `runtimePaths` | Explicit absolute read-only paths for runtime libraries, scripts, and installed dependencies. |
-| `environment` | Explicit non-sensitive server environment values; isolation and loader variables cannot be overridden. |
-| `adapter` | `generic` by default; `go` preserves Go's toolchain and dependency checks. |
-| `disabled` | Remove a named profile, for example `go: {disabled: true}`. |
-
-An explicit profile replaces the entire built-in profile of the same name.
-Explicit names sort alphabetically before remaining defaults, making overlapping matches deterministic.
-Configuration rejects unknown fields, duplicate keys, unsafe paths, and oversized inputs before the service starts.
-
-Install the server and its dependencies on the host or in a derived container image.
-Declare only the runtime paths it needs, never your whole home directory or credential folders.
-Some packaged runtimes, including Homebrew Node, require additional shared-library directories.
-For bundled Node profiles, `FJORD_NODE_RUNTIME_PATHS` accepts an OS-separated list of precise additional read-only runtime paths.
-On macOS, inspect `otool -L "$(command -v node)"` and its libraries; include each required library directory, including the Node library directory itself, without granting access to the entire Homebrew prefix.
-`FJORD_LANGUAGE_BUNDLE` selects the absolute bundle directory, defaulting to `/opt/fjord/languages`; the native installer defaults to this checkout's `languages` directory and honors the variable when set.
-Both variables are operator configuration and pass the same runtime-path validation as YAML profiles.
-Servers receive a clean environment, read-only source, temporary writable storage, and no network access.
-Repository configuration may influence the language server itself, so its executable and runtime paths must be trusted.
-Fjord does not run repository installation hooks or fetch dependencies for it.
-
-Symbol menus discover navigation and inspection support from the server's actual `initialize` response.
-Unsupported actions stay hidden; server startup failures offer a retry without blocking comments.
-The transport currently supports stdio and UTF-16 positions, not remote TCP/WebSocket servers or other position encodings.
-
-## Language-server review tools
-
-The outline sidebar, heading search, inline diagnostics, and symbol tools expose the features the language server supports:
-
-| Feature | Use during review |
-| --- | --- |
-| Diagnostics | See severity markers and squiggles inline; open messages and available fixes. |
-| Incoming / outgoing calls | Follow callers or callees, including reported call sites. |
-| Supertypes / subtypes | Explore the selected type's hierarchy. |
-| File outline | Browse automatically loaded functions, types, and declarations in the right sidebar. |
-| Workspace symbols | Search from the heading across the selected project root, including unchanged files. |
-| Highlight occurrences | Mark reads and writes of the selected symbol inline. |
-| Inlay hints | Show inferred types or parameter names without changing source offsets. |
-| Code actions | Inspect a proposed fix and explicitly add review suggestion drafts. |
-| Preview rename | Enter a new name and inspect the edits across files. |
-
-Explicit symbol-navigation results stay in the initiating popup. Inline annotations are tied to the exact file and revision and can be cleared.
-The Go default profile enables parameter-name, assigned-variable-type, and range-variable-type hints; custom servers may require their own hint settings.
-Diagnostics use pull reports when available or wait briefly for push publications. A server that has not published is reported as pending, not as having no problems.
-Reports load as files mount, with bounded caching and concurrency. File headers show counts, a visibility toggle, and retry states.
-Head diagnostics never decorate deleted base lines; base source views and removed files request their own revision's report.
-
-Code actions and rename never modify the workspace. Server commands and file creation, deletion, or renaming are not executed.
-Edit previews validate every source range and reject overlapping or out-of-revision changes.
-Code actions can become suggestions only when every edit fits existing head-side PR diff lines; edits on the same line are combined and multiline review boundaries are preserved.
-Fixes that touch unchanged files remain previews because GitHub inline suggestions must attach to reviewable diff lines.
-Available results still depend on installed dependencies and the server's indexing; bounded response and source limits prevent oversized results from blocking the review.
-
-## Containers
-
-The Dockerfile includes `gopls`, `tofu-ls`, Go, Node, GitHub CLI, Bubblewrap, and the pinned [Node language-server bundle](languages/package.json).
-The bundle installs with `npm ci --ignore-scripts`; no package lifecycle hooks run.
-TypeScript uses the bundled compiler, with automatic typing downloads disabled.
-Bash navigation does not run ShellCheck, shfmt, or explainshell.
-YAML uses bundled Kubernetes and GitHub Actions schemas; JSON/JSONC uses a bundled TypeScript configuration schema.
-Schema discovery and downloads are disabled. All servers remain network-isolated.
-Build the base image or the example strict-Python configuration:
-
-```sh
-docker build --build-arg APP_VERSION="$(git rev-parse HEAD)" -t fjord:local .
-docker build -f examples/Dockerfile.python -t fjord:python .
-```
-
-Mount the example configuration read-only and pass `-config /etc/fjord/language-servers.yaml`.
-Provide the server's GitHub CLI identity through runtime credentials, and set `-host` to the hostname browsers use.
-The image runs as UID 10001 and listens on `0.0.0.0:4727`; allow writable temporary storage.
-
-The host kernel and container runtime must permit nested unprivileged user namespaces and Bubblewrap's required namespace operations.
-A Kubernetes cluster with user namespaces disabled cannot run this LSP isolation model unchanged.
-Fjord fails closed; do not work around that with a privileged container or by removing the sandbox.
-The base AMD64 image has been built and exercised on Talos Kubernetes with real gopls, tofu-ls, and sandbox isolation tests.
-That deployment uses a pod user namespace (`hostUsers: false`), `procMount: Unmasked` for nested procfs, and a Localhost seccomp profile derived from containerd's default with Bubblewrap namespace setup syscalls allowed.
-It remains nonroot, with all capabilities dropped and privilege escalation disabled.
-The Python recipe only supplies an operator configuration; Pyright is included in the base image.
-
-## Navigation limits
-
-The language server is selected from the file being inspected rather than initialized as Go for every repository.
-Go navigation uses the nearest Go module. Standard-library, in-repository local replacements, and vendored dependencies work offline.
-For unvendored dependencies, Fjord prepares the required versions pinned by the revision's `go.mod` and `go.sum` before starting gopls.
-Only `proxy.golang.org` and its Google Storage artifact redirects are contacted. Downloads have time, transfer, expanded-size, file-count, and module-count limits.
-Module metadata checksums are verified; archive extraction and checksum verification run through Go inside the network-disabled sandbox.
-The resulting dependency cache is read-only to gopls. No repository installation scripts, GitHub credentials, VCS commands, CGO, or automatic toolchain downloads are allowed.
-Dependencies enable analysis of the PR's own code; navigation into external dependency source is not currently exposed.
-
-For private dependencies or fully offline operation, set `FJORD_GO_MODULE_CACHE` to an operator-populated Go module cache, normally the directory reported by `go env GOMODCACHE`.
-Populate it with the reviewed project's `go mod download` outside Fjord, then mount it read-only in the service.
-Fjord reads regular artifacts under its `cache/download` directory and verifies them against the PR's committed checksums.
-When this option is set, cache misses fail without falling back to the public proxy, so private module names are not disclosed.
-The cache must include the project's public dependencies as well.
-Incomplete module metadata, unavailable dependencies, checksum failures, inconsistent vendoring, and incompatible installed Go toolchains produce distinct errors with next steps.
-Once at least one repository package can load, gopls starts even if other packages have errors, such as missing generated embed assets.
-Usable packages remain navigable while gopls reports source diagnostics; results involving incomplete packages may be unavailable.
-If no repository package can load, Fjord retains the actionable package-loading error instead of treating successful standard-library imports as a usable workspace.
-Legacy modules with a `go` directive below 1.17 can omit transitive requirements that Fjord needs for preparation.
-If their dependency graph cannot be loaded, vendor the dependencies or intentionally upgrade the module's `go` directive to 1.17 or newer and commit the resulting `go mod tidy` changes.
-Running tidy alone while retaining the older directive does not populate the modern dependency graph.
-
-Terraform navigation uses `tofu-ls` to index configuration and local modules without running `tofu init`.
-Supported Terraform files are `.tf`, `.tf.json`, `.tfvars`, `.tfvars.json`, and `.tofu`.
-Provider downloads and execution are unavailable in the sandbox.
-Remote modules and provider-specific schema information can therefore remain unresolved.
-
-Archive extraction rejects symlinks, hardlinks, special files, traversal, and oversized archives.
-The source pane cannot open files outside the extracted tree, including standard-library and dependency-cache files.
-Workspaces are temporary, bounded, and removed at shutdown.
-
-Dependency provisioning, hosted accounts, check-run views, posting top-level issue comments, and thread resolution remain future work.
-The GitHub PR link provides actions not yet exposed here.
-
-## MCP assistance
-
-Fjord exposes a Streamable HTTP MCP server at `/mcp`. Open a real PR in the browser, then configure your preferred MCP client with the same service's endpoint, for example `http://127.0.0.1:4727/mcp`.
-The Settings menu shows the endpoint and browser-session connection state.
-No model provider, API key, or embedded chat is configured in Fjord.
-
-An MCP client can discover open review sessions, read draft and published inline comments, PR conversation and review decisions, read code at the pinned revision, query the language server, and show source or navigation results in the browser.
-It can propose inline comments and GitHub suggestion drafts. These remain visibly AI-attributed drafts for the reviewer to inspect, edit, or remove.
-Tools do not submit reviews, reply on GitHub, execute language-server commands, or write source files.
-
-Browser actions are queued with idempotency keys and acknowledged after the tab applies them.
-Tool responses distinguish pending delivery from applied or failed delivery.
-The browser remains the owner of its draft and mirrors it to the service; incoming drafts merge without replacing human edits.
-Sessions are tied to the exact head and merge-base SHAs. A newly pushed revision requires opening a new review session.
-
-Sessions and pending actions are bounded, expire, and live in one server process.
-Restarting the service discards pending delivery; already applied browser drafts remain in sessionStorage.
-Use a single service replica for this workflow. A connected browser tab is required to display results or accept drafts.
-Review content and source returned through MCP are untrusted repository data, not instructions.
-Your chosen AI client controls what it sends to its model provider.
-
-## Chrome extension
-
-The [Chrome extension](extension/README.md) redirects GitHub PR `/changes` pages to `https://fjord.stout.zone/owner/repo/number`.
-It handles both full navigation and GitHub's in-page history transitions, without redirecting ordinary PR conversation pages.
-Load the unpacked extension in a development browser using the instructions in its README.
-The extension does not configure or deploy the Fjord service.
-
-## Security and telemetry
-
-Fjord binds to loopback by default and supports explicitly configured trusted LAN access.
-Exact Host and Origin checks, JSON-only API requests, and a restrictive Content Security Policy block requests from unrelated websites.
-LAN mode, including MCP, has no authentication and is not a multi-user security boundary; use it only on a trusted network.
-Native MCP clients may omit Origin; supplied origins must match the configured public origin and cross-site browser requests are rejected.
-GitHub credentials stay in the backend.
-Browser draft storage contains review text, so use a trusted browser profile.
-
-JSON logs contain trace/span IDs.
-Set `OTEL_EXPORTER_OTLP_ENDPOINT` and `OTEL_EXPORTER_OTLP_HEADERS` through the runtime environment to export logs and traces using OTLP HTTP/protobuf.
-Without an endpoint, telemetry stays local.
-Set `FJORD_ENVIRONMENT=production` in hosted deployments so backend signals and the browser relay identify the deployment correctly; it defaults to `local`.
-W3C TraceContext and Baggage are supported.
-Never put ingestion credentials in Git, command arguments, logs, or browser code.
-
-Optional RUM uses the shared `@nerdswhofish/browser-telemetry` Faro package and a same-origin relay.
-Configure `FJORD_FARO_URL` on the server.
-The relay rebuilds allowlisted error, event, and Web Vitals envelopes.
-It discards user/session metadata, arbitrary text, source paths, and browser trace payloads.
-Code, review text, credentials, and raw repository identities are never logged.
-
-## Development
-
-The Go packages separate GitHub, navigation, telemetry, and HTTP boundaries; MCP tools reuse these services.
-`web/` contains React/TypeScript.
-Theme palettes live in `web/src/theme.css`; components consume semantic CSS variables for surfaces, controls, diff states, file-tree states, and syntax tokens.
-To add a named theme, define its palette, extend the theme choices in `web/src/theme.ts` and `web/src/ThemeToggle.tsx`, and include its contrast cases in `web/src/theme.test.ts`.
-`make check` and CI require real `gopls`, `tofu-ls`, the pinned Node bundle, and a supported sandbox.
-`make test` runs Go unit tests; use `FJORD_TEST_GOPLS=1 FJORD_TEST_TOFU_LS=1 make test` to include language-server integration tests.
-Set `FJORD_TEST_NODE_LSP=1` with `FJORD_LANGUAGE_BUNDLE` pointing at the installed bundle to exercise Node server navigation, offline schema diagnostics, and the TypeScript repository-plugin isolation test.
-Set `FJORD_TEST_PYRIGHT_CONFIG` to a working Python profile YAML to also exercise real sandboxed Pyright definitions, references, and hover.
-
-Goblin currently provides a foundation and UI concepts, not an implemented PR engine.
-Plannotator's edit-approval lifecycle differs from GitHub reviews.
-Fjord reuses language servers, GitHub APIs, OpenTelemetry, and the shared browser telemetry package.
-Architectural tradeoffs live in [adr/](adr/README.md).
-
-Changes require human review before publication.
-A passing local build does not imply a hosted deployment or production telemetry verification.
-
-## License
-
-MIT. See [LICENSE](LICENSE).
+Development: `make check` runs the full checks with installed language servers. [Architecture decisions](adr/README.md). [MIT license](LICENSE).
