@@ -1,6 +1,7 @@
 .git
 bin
 artifacts
+dist
 web/node_modules
 web/dist
 *.log
