@@ -1,0 +1,169 @@
+.review-decision-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 16px;
+}
+.review-decision-actions > button {
+  font-size: 12px;
+}
+.review-decision-actions .review-approve {
+  border-color: var(--brand-accent);
+}
+.header-actions {
+  flex-wrap: wrap;
+}
+.workspace-search-trigger {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 6px;
+}
+.workspace-search-trigger kbd {
+  color: var(--muted);
+  font-size: 9px;
+}
+.outline-panel {
+  padding: 24px 20px;
+}
+.outline-path {
+  font:
+    12px/1.6 "IBM Plex Mono",
+    monospace;
+  overflow-wrap: anywhere;
+  margin: 18px 0 4px;
+}
+.outline-revision {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 0 0 20px;
+}
+.outline-items {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.outline-items .outline-items {
+  margin-left: 10px;
+  border-left: 1px solid var(--line);
+  padding-left: 6px;
+}
+.outline-items button {
+  width: 100%;
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 7px;
+  text-align: left;
+  border: 0;
+  border-radius: 4px;
+  padding: 9px 5px;
+  background: transparent;
+}
+.outline-items button:hover,
+.outline-items button.active {
+  background: var(--surface-selected);
+  box-shadow: inset 2px 0 var(--brand-accent);
+}
+.outline-symbol-kind,
+.outline-line {
+  font-size: 10px;
+  color: var(--muted);
+}
+.outline-symbol-name {
+  font:
+    12px/1.6 "IBM Plex Mono",
+    monospace;
+  overflow-wrap: anywhere;
+}
+.outline-items summary {
+  font-size: 11px;
+  color: var(--muted);
+  padding: 5px;
+  cursor: pointer;
+}
+.review-summary-dialog,
+.workspace-search-dialog {
+  width: min(800px, calc(100vw - 32px));
+  max-width: calc(100vw - 32px);
+  max-height: calc(100dvh - 32px);
+  overflow-y: auto;
+}
+.review-summary-dialog {
+  padding: 0;
+}
+.review-summary-dialog .review-panel {
+  padding: 24px;
+}
+.review-summary-dialog .dialog-heading {
+  margin-bottom: 24px;
+}
+.review-summary-dialog h2 {
+  overflow-wrap: anywhere;
+}
+.draft-actions {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px 16px;
+  margin-top: 12px;
+}
+.draft-actions .draft-attribution {
+  margin: 0;
+  margin-right: auto;
+}
+.draft-actions button {
+  min-height: 32px;
+}
+.workspace-search-form {
+  display: flex;
+  gap: 8px;
+  margin: 20px 0;
+}
+.workspace-search-form input {
+  flex: 1;
+  min-width: 0;
+}
+.workspace-symbol-results {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+.workspace-symbol-results button {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px;
+  margin: 6px 0;
+}
+.workspace-symbol-results button > span {
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+}
+.workspace-symbol-results code {
+  display: block;
+  margin-top: 5px;
+  font-size: 11px;
+  color: var(--muted);
+  overflow-wrap: anywhere;
+}
+@media (max-width: 600px) {
+  .review-decision-actions {
+    gap: 6px;
+  }
+  .review-decision-actions > button {
+    padding: 9px;
+  }
+  .header-actions {
+    width: 100%;
+    justify-content: space-between;
+  }
+  .review-summary-dialog .review-panel {
+    padding: 16px;
+  }
+  .outline-panel {
+    padding: 20px 16px;
+  }
+}

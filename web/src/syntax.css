@@ -1,0 +1,30 @@
+.syntax-comment {
+  color: var(--syntax-comment);
+}
+.syntax-keyword {
+  color: var(--syntax-keyword);
+}
+.syntax-string {
+  color: var(--syntax-string);
+}
+.syntax-number {
+  color: var(--syntax-number);
+}
+.syntax-function {
+  color: var(--syntax-function);
+}
+.syntax-type {
+  color: var(--syntax-type);
+}
+.syntax-property {
+  color: var(--syntax-property);
+}
+.syntax-operator {
+  color: var(--syntax-operator);
+}
+.syntax-punctuation {
+  color: var(--syntax-punctuation);
+}
+.syntax-tag {
+  color: var(--syntax-tag);
+}

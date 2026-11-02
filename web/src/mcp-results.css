@@ -1,0 +1,44 @@
+.mcp-results {
+  padding: 20px 16px;
+  min-width: 0;
+}
+.mcp-results h2 {
+  font-size: 16px;
+  margin-top: 20px;
+}
+.mcp-results .context-feature-results {
+  max-height: 65svh;
+}
+.mcp-results .context-destinations button {
+  width: 100%;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+.draft-attribution {
+  display: inline-block;
+  color: var(--muted);
+  font-size: 11px;
+  margin: 10px 0 0;
+}
+.mcp-connection {
+  border-top: 1px solid var(--line);
+  padding-top: 16px;
+  display: grid;
+  gap: 10px;
+}
+.mcp-connection p {
+  font-size: 11px;
+  line-height: 1.5;
+  margin: 0;
+}
+.mcp-connection input {
+  width: 100%;
+  min-width: 0;
+  font-size: 11px;
+}
+.mcp-connection label {
+  font-size: 11px;
+}
+.mcp-session-id {
+  overflow-wrap: anywhere;
+}

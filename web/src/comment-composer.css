@@ -1,0 +1,62 @@
+dialog.comment-composer {
+  width: min(900px, calc(100vw - 30px));
+  max-height: calc(100dvh - 30px);
+  overflow: auto;
+}
+.comment-composer .selected-code {
+  max-height: min(320px, 32dvh);
+  overflow: auto;
+  white-space: pre;
+  border: 1px solid var(--line);
+  font:
+    12px/1.7 "IBM Plex Mono",
+    monospace;
+  tab-size: 4;
+}
+.comment-composer .selected-code code {
+  font: inherit;
+}
+.comment-composer .comment-editor-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 18px 0 8px;
+}
+.comment-composer .comment-editor-heading label {
+  margin: 0;
+}
+.comment-composer .suggestion-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  font-size: 12px;
+  padding: 7px 10px;
+}
+.comment-composer textarea {
+  display: block;
+  width: 100%;
+  min-height: 210px;
+  resize: vertical;
+  font:
+    13px/1.6 "IBM Plex Mono",
+    monospace;
+}
+.comment-composer .composer-help {
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+}
+@media (max-width: 600px) {
+  dialog.comment-composer {
+    padding: 17px;
+  }
+  .comment-composer textarea {
+    min-height: 180px;
+    font-size: 14px;
+  }
+  .comment-composer .selected-code {
+    max-height: 27dvh;
+  }
+}

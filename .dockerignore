@@ -1,0 +1,8 @@
+.git
+bin
+artifacts
+web/node_modules
+web/dist
+*.log
+.env
+.env.*

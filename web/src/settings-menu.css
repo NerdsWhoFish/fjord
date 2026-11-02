@@ -1,0 +1,53 @@
+.settings-menu {
+  position: relative;
+  align-self: flex-end;
+}
+.settings-trigger {
+  list-style: none;
+}
+.settings-trigger::-webkit-details-marker {
+  display: none;
+}
+.settings-trigger:focus-visible {
+  outline: 3px solid var(--focus);
+  outline-offset: 3px;
+}
+.settings-panel {
+  position: absolute;
+  z-index: 50;
+  right: 0;
+  top: calc(100% + 8px);
+  width: 240px;
+  max-width: calc(100vw - 32px);
+  padding: 18px;
+  display: grid;
+  gap: 16px;
+  border: 1px solid var(--border-strong);
+  border-radius: 7px;
+  background: var(--surface-raised);
+  box-shadow: 0 8px 28px var(--shadow);
+}
+.settings-panel .theme-toggle {
+  display: flex;
+  justify-content: space-between;
+  color: var(--ink);
+}
+.settings-menu:not([open]) .settings-panel {
+  display: none;
+}
+.diff-mode-setting {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+.diff-mode-setting select {
+  min-width: 0;
+  width: auto;
+}
+@media (max-width: 700px) {
+  .header-actions .settings-panel {
+    left: 0;
+    right: auto;
+  }
+}
