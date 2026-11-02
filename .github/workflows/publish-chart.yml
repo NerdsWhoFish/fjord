@@ -1,0 +1,67 @@
+name: Publish Helm chart
+
+on:
+  workflow_call:
+    inputs:
+      release-tag:
+        required: true
+        type: string
+    secrets:
+      HELM_APP_ID:
+        required: true
+      HELM_APP_PRIVATE_KEY:
+        required: true
+  workflow_dispatch:
+    inputs:
+      release-tag:
+        description: Published application release to package
+        required: true
+        default: v1.0.0
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: fjord-chart-publication
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: azure/setup-helm@v4.3.1
+        with:
+          version: v3.19.0
+      - uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+      - name: Validate chart
+        env:
+          GOWORK: "off"
+          FJORD_TEST_HELM: "1"
+        run: go test ./charts/fjord/tests -count=1
+      - name: Verify release and package chart
+        id: package
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ inputs.release-tag }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          [[ "$RELEASE_TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-rc\.[0-9]+)?$ ]] || {
+            echo "::error::Expected a stable or release-candidate version tag"
+            exit 1
+          }
+          gh release view "$RELEASE_TAG" --json isDraft --jq '.isDraft' | grep -qx false
+          version="${RELEASE_TAG#v}"
+          helm package charts/fjord --version "$version" --app-version "$version" --destination artifacts
+          echo "path=artifacts/fjord-$version.tgz" >> "$GITHUB_OUTPUT"
+      - name: Submit package to the Helm repository
+        uses: NerdsWhoFish/helm-charts/publish@590c20f94ad38343435c0fdd1dde8832029e535a
+        with:
+          package: ${{ steps.package.outputs.path }}
+          app-id: ${{ secrets.HELM_APP_ID }}
+          app-private-key: ${{ secrets.HELM_APP_PRIVATE_KEY }}

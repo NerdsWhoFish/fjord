@@ -18,6 +18,17 @@ The source commit is embedded in the web assets and the release version in the s
 Release candidates do not replace Docker's stable tags.
 Publishing an image does not promote the Kubernetes deployment; its GitOps image digest is updated separately.
 
+## Helm chart
+
+After a successful release, the chart job packages `charts/fjord` with matching chart and application versions.
+It submits the archive to [NerdsWhoFish/helm-charts](https://github.com/NerdsWhoFish/helm-charts), whose workflow validates it and publishes the Helm index to `https://charts.nerdswhofish.com`.
+R2 credentials stay in that repository.
+
+Fjord uses `HELM_APP_ID` and `HELM_APP_PRIVATE_KEY` Actions secrets to mint a short-lived token limited to the Helm repository.
+The **Publish Helm chart** workflow can also publish an existing application release from `main`, or retry chart publication without releasing the application again.
+Existing chart versions cannot be replaced with different contents; chart changes require a new version.
+Dry-run releases do not submit charts.
+
 ## Signing identity
 
 The repository Actions secret `FJORD_EXTENSION_SIGNING_KEY` contains an RSA private key in PEM format.

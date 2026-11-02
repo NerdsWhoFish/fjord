@@ -1,0 +1,155 @@
+{{- include "fjord.validate" . -}}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "fjord.fullname" . }}
+  labels:
+    {{- include "fjord.labels" . | nindent 4 }}
+spec:
+  # Review and MCP sessions belong to one process.
+  replicas: 1
+  strategy:
+    type: Recreate
+  selector:
+    matchLabels:
+      {{- include "fjord.selectorLabels" . | nindent 6 }}
+  template:
+    metadata:
+      labels:
+        {{- include "fjord.selectorLabels" . | nindent 8 }}
+      {{- with .Values.podAnnotations }}
+      annotations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+    spec:
+      automountServiceAccountToken: false
+      hostUsers: false
+      {{- with .Values.imagePullSecrets }}
+      imagePullSecrets:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 10001
+        runAsGroup: 10001
+        fsGroup: 10001
+        seccompProfile:
+          type: Localhost
+          localhostProfile: {{ .Values.sandbox.seccompProfile | quote }}
+      containers:
+        - name: fjord
+          image: {{ include "fjord.image" . | quote }}
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          args:
+            - -addr
+            - "0.0.0.0:4727"
+            - -public-url
+            - {{ .Values.publicURL | quote }}
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            procMount: Unmasked
+            capabilities:
+              drop: [ALL]
+          ports:
+            - name: http
+              containerPort: 4727
+          env:
+            - name: GH_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.github.existingSecret | quote }}
+                  key: {{ .Values.github.tokenKey | quote }}
+            - name: FJORD_ENVIRONMENT
+              value: {{ .Values.telemetry.environment | quote }}
+            {{- if .Values.languageServers.existingConfigMap }}
+            - name: FJORD_CONFIG
+              value: /etc/fjord/language-servers.yaml
+            {{- end }}
+            {{- if .Values.goModuleCache.existingClaim }}
+            - name: FJORD_GO_MODULE_CACHE
+              value: /var/cache/fjord/go
+            {{- end }}
+            {{- if .Values.telemetry.otlpEndpoint }}
+            - name: OTEL_EXPORTER_OTLP_ENDPOINT
+              value: {{ .Values.telemetry.otlpEndpoint | quote }}
+            - name: OTEL_EXPORTER_OTLP_PROTOCOL
+              value: http/protobuf
+            {{- end }}
+            {{- if .Values.telemetry.existingSecret }}
+            - name: OTEL_EXPORTER_OTLP_HEADERS
+              valueFrom:
+                secretKeyRef:
+                  name: {{ .Values.telemetry.existingSecret | quote }}
+                  key: {{ .Values.telemetry.headersKey | quote }}
+            {{- end }}
+            {{- if .Values.telemetry.faroURL }}
+            - name: FJORD_FARO_URL
+              value: {{ .Values.telemetry.faroURL | quote }}
+            {{- end }}
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: {{ (urlParse .Values.publicURL).host | quote }}
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+              httpHeaders:
+                - name: Host
+                  value: {{ (urlParse .Values.publicURL).host | quote }}
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            {{- toYaml .Values.resources | nindent 12 }}
+          volumeMounts:
+            - name: temporary
+              mountPath: /tmp
+            - name: home
+              mountPath: /home/fjord
+            {{- if .Values.languageServers.existingConfigMap }}
+            - name: language-servers
+              mountPath: /etc/fjord
+              readOnly: true
+            {{- end }}
+            {{- if .Values.goModuleCache.existingClaim }}
+            - name: go-module-cache
+              mountPath: /var/cache/fjord/go
+              readOnly: true
+            {{- end }}
+      volumes:
+        - name: temporary
+          emptyDir:
+            sizeLimit: {{ .Values.temporaryStorage.sizeLimit }}
+        - name: home
+          emptyDir:
+            sizeLimit: 128Mi
+        {{- if .Values.languageServers.existingConfigMap }}
+        - name: language-servers
+          configMap:
+            name: {{ .Values.languageServers.existingConfigMap | quote }}
+            items:
+              - key: {{ .Values.languageServers.configKey | quote }}
+                path: language-servers.yaml
+        {{- end }}
+        {{- if .Values.goModuleCache.existingClaim }}
+        - name: go-module-cache
+          persistentVolumeClaim:
+            claimName: {{ .Values.goModuleCache.existingClaim | quote }}
+            readOnly: true
+        {{- end }}
+      {{- with .Values.nodeSelector }}
+      nodeSelector:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.tolerations }}
+      tolerations:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- with .Values.affinity }}
+      affinity:
+        {{- toYaml . | nindent 8 }}
+      {{- end }}

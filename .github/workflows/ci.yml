@@ -30,6 +30,13 @@ jobs:
           cache-dependency-path: |
             web/package-lock.json
             languages/package-lock.json
+      - uses: azure/setup-helm@v4.3.1
+        with:
+          version: v3.19.0
+      - name: Validate Helm chart
+        env:
+          FJORD_TEST_HELM: "1"
+        run: go test ./charts/fjord/tests -count=1
       - name: Select Chrome for extension packaging tests
         shell: bash
         run: |
