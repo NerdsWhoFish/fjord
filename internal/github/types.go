@@ -30,6 +30,7 @@ type File struct {
 	Additions    int    `json:"additions"`
 	Deletions    int    `json:"deletions"`
 	Patch        string `json:"patch"`
+	Reviewable   *bool  `json:"reviewable,omitempty"`
 }
 
 type Review struct {

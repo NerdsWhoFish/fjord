@@ -8,6 +8,8 @@ import {
 } from "react";
 import { api } from "./api";
 import { parsePRRoute, prPath } from "./pr-route";
+import { PRLoading } from "./PRLoading";
+import { reviewRedirect } from "./review-redirect";
 import { OutlinePanel } from "./OutlinePanel";
 import { WorkspaceSearch } from "./WorkspaceSearch";
 import { MCPResults } from "./MCPResults";
@@ -28,6 +30,7 @@ import { remainingDraft, submissionBody } from "./review-draft";
 import type {
   CodeLocation,
   ConversationEntry,
+  FileDiff,
   ChangedFile,
   Config,
   CodeAnnotations,
@@ -60,10 +63,19 @@ function Brand() {
 
 export function App() {
   const [diffMode, setDiffMode] = useDiffMode();
-  const [url, setURL] = useState("");
+  const [initialRoute] = useState(() =>
+    parsePRRoute({
+      pathname: location.pathname,
+      search: location.search,
+      hash: "",
+    }),
+  );
+  const [url, setURL] = useState(
+    initialRoute.kind === "pr" ? initialRoute.githubURL : "",
+  );
   const [pr, setPR] = useState<PullRequest>();
   const [demo, setDemo] = useState(false);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(initialRoute.kind === "pr");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [selectedFile, setSelectedFile] = useState("");
@@ -101,6 +113,7 @@ export function App() {
   const routeAddress = useRef("");
   const workspaces = useRef(new Map<string, { id: string; expires: number }>());
   const workspaceRequests = useRef(new Map<string, Promise<string>>());
+  const diffRequests = useRef(new Map<string, Promise<FileDiff>>());
   const capabilityRequests = useRef(
     new Map<
       string,
@@ -323,6 +336,7 @@ export function App() {
     setFilter("");
     workspaces.current.clear();
     workspaceRequests.current.clear();
+    diffRequests.current.clear();
     capabilityRequests.current.clear();
     outlineRequests.current.clear();
     setMobileTab("code");
@@ -496,6 +510,50 @@ export function App() {
           path,
         })
       ).content;
+    },
+    [pr, demo],
+  );
+  const loadDiff = useCallback(
+    async (target: ChangedFile): Promise<FileDiff> => {
+      if (!pr) throw new Error("Open a pull request before loading its diff.");
+      if (demo)
+        return {
+          patch: "",
+          status: "unavailable",
+          reason: "This sample does not include a diff for this file.",
+        };
+      const request = {
+        owner: pr.owner,
+        repo: pr.repo,
+        baseSHA: pr.baseSHA,
+        headSHA: pr.headSHA,
+        path: target.path,
+        previousPath: target.previousPath,
+        status: target.status,
+      };
+      const key = JSON.stringify(request);
+      const existing = diffRequests.current.get(key);
+      if (existing) return existing;
+      const currentPR = prEpoch.current;
+      const pending = api<FileDiff>("diff", request).then((result) => {
+        if (prEpoch.current !== currentPR)
+          throw new Error("The pull request changed while loading its diff.");
+        return result;
+      });
+      diffRequests.current.set(key, pending);
+      try {
+        const result = await pending;
+        if (
+          result.status === "unavailable" &&
+          diffRequests.current.get(key) === pending
+        )
+          diffRequests.current.delete(key);
+        return result;
+      } catch (error) {
+        if (diffRequests.current.get(key) === pending)
+          diffRequests.current.delete(key);
+        throw error;
+      }
     },
     [pr, demo],
   );
@@ -710,7 +768,7 @@ export function App() {
     const currentPR = prEpoch.current;
     const submitted = draftRef.current;
     try {
-      const result = await api<{ url: string }>("review", {
+      await api<{ url: string }>("review", {
         owner: pr.owner,
         repo: pr.repo,
         number: pr.number,
@@ -729,10 +787,13 @@ export function App() {
       });
       if (prEpoch.current === currentPR) {
         changeDraft(remainingDraft(draftRef.current, submitted));
-        setNotice(
-          `Review submitted to GitHub.${result.url ? " Open the PR to see your review." : ""}`,
+        const destination = reviewRedirect(
+          pr,
+          currentPR,
+          prEpoch.current,
+          demo,
         );
-        void reloadThreads();
+        if (destination) window.location.assign(destination);
       } else {
         writeDraft(pr, false, remainingDraft(readDraft(pr, false), submitted));
       }
@@ -897,51 +958,55 @@ export function App() {
             onRetrySession={reviewSession.retry}
           />
         </header>
-        <main className="welcome-main">
-          <div className="welcome-copy">
-            <span className="eyebrow">GITHUB PR REVIEW, WITH CONTEXT</span>
-            <h1>
-              Follow the code.
-              <br />
-              <span>Find your footing.</span>
-            </h1>
-            <p>
-              A diff tells you what changed. Fjord helps you understand what it
-              means. Explore definitions, follow implementations, and bring your
-              review back to GitHub.
-            </p>
-            {openForm}
-            {error && (
-              <p className="error" role="alert">
-                {error}
-              </p>
-            )}
-            <button className="demo-link" onClick={openDemo}>
-              Explore a sample review <span aria-hidden="true">&rarr;</span>
-            </button>
-            <p className="connection-note">
-              <span className="live-dot" />
-              Uses your local GitHub CLI session.
-            </p>
-          </div>
-          <div className="welcome-landscape" aria-hidden="true">
-            <div className="contour c1" />
-            <div className="contour c2" />
-            <div className="contour c3" />
-            <div className="channel" />
-            <div className="landscape-label">
-              <span>BEYOND THE DIFF</span>
-              <strong>
-                More context.
+        {loading ? (
+          <PRLoading url={url} />
+        ) : (
+          <main className="welcome-main">
+            <div className="welcome-copy">
+              <span className="eyebrow">GITHUB PR REVIEW, WITH CONTEXT</span>
+              <h1>
+                Follow the code.
                 <br />
-                Better judgment.
-              </strong>
-              <span>
-                01 / EXPLORE &nbsp; 02 / UNDERSTAND &nbsp; 03 / REVIEW
-              </span>
+                <span>Find your footing.</span>
+              </h1>
+              <p>
+                A diff tells you what changed. Fjord helps you understand what
+                it means. Explore definitions, follow implementations, and bring
+                your review back to GitHub.
+              </p>
+              {openForm}
+              {error && (
+                <p className="error" role="alert">
+                  {error}
+                </p>
+              )}
+              <button className="demo-link" onClick={openDemo}>
+                Explore a sample review <span aria-hidden="true">&rarr;</span>
+              </button>
+              <p className="connection-note">
+                <span className="live-dot" />
+                Uses your local GitHub CLI session.
+              </p>
             </div>
-          </div>
-        </main>
+            <div className="welcome-landscape" aria-hidden="true">
+              <div className="contour c1" />
+              <div className="contour c2" />
+              <div className="contour c3" />
+              <div className="channel" />
+              <div className="landscape-label">
+                <span>BEYOND THE DIFF</span>
+                <strong>
+                  More context.
+                  <br />
+                  Better judgment.
+                </strong>
+                <span>
+                  01 / EXPLORE &nbsp; 02 / UNDERSTAND &nbsp; 03 / REVIEW
+                </span>
+              </div>
+            </div>
+          </main>
+        )}
         <footer>
           Built for people who read the code.
           <span>GitHub stays the source of truth.</span>
@@ -1166,6 +1231,7 @@ export function App() {
                 onDiagnostics={loadDiagnostics}
                 onSource={openSource}
                 onLoadContent={loadContent}
+                onLoadDiff={loadDiff}
                 onLocation={(location) => {
                   void showLocation(location);
                 }}

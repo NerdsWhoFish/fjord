@@ -69,6 +69,13 @@ export interface ChangedFile {
   additions: number;
   deletions: number;
   patch?: string;
+  reviewable?: boolean;
+}
+export interface FileDiff {
+  patch: string;
+  status:
+    "reconstructed" | "unchanged" | "binary" | "too_large" | "unavailable";
+  reason: string;
 }
 export interface PullRequest {
   owner: string;

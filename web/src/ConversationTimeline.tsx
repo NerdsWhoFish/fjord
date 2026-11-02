@@ -1,5 +1,6 @@
 import type { ConversationEntry, PullRequest } from "./types";
 import "./conversation.css";
+import { MarkdownContent } from "./MarkdownContent";
 
 export function reviewLabel(state?: string) {
   switch (state) {
@@ -29,7 +30,7 @@ export function ConversationTimeline({
       {pr.body && (
         <details className="thread pr-description">
           <summary>Pull request description by {pr.author}</summary>
-          <p>{pr.body}</p>
+          <MarkdownContent>{pr.body}</MarkdownContent>
         </details>
       )}
       {entries.map((entry) => (
@@ -53,7 +54,7 @@ export function ConversationTimeline({
               {new Date(entry.createdAt).toLocaleString()}
             </time>
           )}
-          {entry.body && <p>{entry.body}</p>}
+          {entry.body && <MarkdownContent>{entry.body}</MarkdownContent>}
         </article>
       ))}
     </div>

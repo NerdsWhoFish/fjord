@@ -35,6 +35,7 @@ import type {
   SourceView,
   ThreadComment,
   DraftComment,
+  FileDiff,
 } from "./types";
 import { sourceWindow } from "./window";
 import { buildDiffContext } from "./diff-context";
@@ -83,6 +84,7 @@ interface Props {
   onDiagnostics: (selection: Selection) => Promise<NavigationResult>;
   onSource: (side: Side, file?: ChangedFile) => void;
   onLoadContent: (file: ChangedFile, side: Side) => Promise<string>;
+  onLoadDiff?: (file: ChangedFile) => Promise<FileDiff>;
   onLocation: (location: CodeLocation) => void;
   onCloseSource: () => void;
   onComment: (selection: Selection) => void;
@@ -441,6 +443,7 @@ function FileCodePanel({
   onCapabilities,
   onSource,
   onLoadContent,
+  onLoadDiff,
   onCloseSource,
   onComment,
   viewed,
@@ -521,8 +524,58 @@ function FileCodePanel({
     () => source?.content.split("\n") || [],
     [source?.content],
   );
-  const lines = useMemo(() => parsePatch(file.patch || ""), [file.patch]);
-  const indexed = useMemo(() => indexCommentLines(lines), [lines]);
+  const [fallback, setFallback] = useState<FileDiff>();
+  const [fallbackLoading, setFallbackLoading] = useState(
+    !sourceOnly && !file.patch && !!onLoadDiff,
+  );
+  const [fallbackAttempt, setFallbackAttempt] = useState(0);
+  const fallbackLoader = useRef(onLoadDiff);
+  fallbackLoader.current = onLoadDiff;
+  useEffect(() => {
+    setFallback(undefined);
+    if (sourceOnly || file.patch || !fallbackLoader.current) {
+      setFallbackLoading(false);
+      return;
+    }
+    let active = true;
+    setFallbackLoading(true);
+    void fallbackLoader
+      .current(file)
+      .then((result) => {
+        if (active) setFallback(result);
+      })
+      .catch(() => {
+        if (active)
+          setFallback({
+            patch: "",
+            status: "unavailable",
+            reason:
+              "Could not load the pinned file content. Retry or inspect it on GitHub.",
+          });
+      })
+      .finally(() => {
+        if (active) setFallbackLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [
+    sourceOnly,
+    file.path,
+    file.previousPath,
+    file.patch,
+    file.status,
+    pr.baseSHA,
+    pr.headSHA,
+    fallbackAttempt,
+  ]);
+  const patch = file.patch || fallback?.patch || "";
+  const commentable = !!file.patch && file.reviewable !== false;
+  const lines = useMemo(() => parsePatch(patch), [patch]);
+  const indexed = useMemo(
+    () => indexCommentLines(commentable ? lines : []),
+    [lines, commentable],
+  );
   const contextRows = useMemo(
     () => buildDiffContext(lines, contextContent, expanded),
     [lines, contextContent, expanded],
@@ -563,6 +616,7 @@ function FileCodePanel({
   useEffect(() => {
     if (
       sourceOnly ||
+      !commentable ||
       file.status === "added" ||
       file.status === "removed" ||
       !lines.some((line) => line.kind === "hunk")
@@ -584,7 +638,14 @@ function FileCodePanel({
     return () => {
       active = false;
     };
-  }, [sourceOnly, file.status, lines, loadContext, contextAttempt]);
+  }, [
+    sourceOnly,
+    commentable,
+    file.status,
+    lines,
+    loadContext,
+    contextAttempt,
+  ]);
   async function expandContext(key: string) {
     if (expanding) return;
     const requestEpoch = ++contextEpoch.current;
@@ -889,6 +950,11 @@ function FileCodePanel({
               </button>
             </div>
           </div>
+          {fallback?.patch && (
+            <p className="diff-context-note" role="status">
+              {fallback.reason}
+            </p>
+          )}
           <div
             className="diff-scroll"
             ref={diffPanel}
@@ -968,7 +1034,9 @@ function FileCodePanel({
                         }
                       : linePosition(line);
                     const points =
-                      rowIndex !== undefined ? indexed[rowIndex] : {};
+                      (rowIndex !== undefined
+                        ? indexed[rowIndex]
+                        : undefined) || {};
                     const selectionFor = (
                       word: string,
                       character: number,
@@ -1029,7 +1097,7 @@ function FileCodePanel({
                               </button>
                             ) : (
                               <span className="line-number" key={side}>
-                                {!original
+                                {!original || !commentable
                                   ? side === "LEFT"
                                     ? line.oldLine
                                     : line.newLine
@@ -1096,7 +1164,7 @@ function FileCodePanel({
                                   symbolIntent(
                                     element,
                                     selectionFor(word, column),
-                                    original,
+                                    original && commentable,
                                     intent,
                                   )
                                 }
@@ -1139,12 +1207,31 @@ function FileCodePanel({
               </div>
             ) : (
               <div className="empty-message">
-                <h3>GitHub did not provide a text diff</h3>
+                <h3>
+                  {fallbackLoading
+                    ? "Loading file content..."
+                    : fallback?.status === "binary"
+                      ? "Binary file"
+                      : fallback?.status === "too_large"
+                        ? "File exceeds the inline view limit"
+                        : fallback?.status === "unchanged"
+                          ? "No text content changed"
+                          : "File content unavailable"}
+                </h3>
                 <p>
-                  This file may be binary, too large, or have no textual
-                  changes. Open its source when available, or inspect it on
-                  GitHub.
+                  {fallbackLoading
+                    ? "Fetching the exact revisions for a read-only view."
+                    : fallback?.reason ||
+                      "Open the source when available, or inspect this file on GitHub."}
                 </p>
+                {fallback?.status === "unavailable" && (
+                  <button
+                    type="button"
+                    onClick={() => setFallbackAttempt((attempt) => attempt + 1)}
+                  >
+                    Retry file content
+                  </button>
+                )}
               </div>
             )}
           </div>

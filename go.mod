@@ -5,6 +5,7 @@ go 1.27.3
 require (
 	github.com/bmatcuk/doublestar/v4 v4.10.4
 	github.com/modelcontextprotocol/go-sdk v1.8.0
+	github.com/sergi/go-diff v1.4.0
 	go.opentelemetry.io/contrib/bridges/otelslog v0.21.0
 	go.opentelemetry.io/otel v1.47.0
 	go.opentelemetry.io/otel/exporters/otlp/otlplog/otlploghttp v0.23.0

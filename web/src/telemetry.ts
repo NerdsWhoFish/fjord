@@ -19,6 +19,7 @@ export function startTelemetry() {
         "/api/pr",
         "/api/config",
         "/api/content",
+        "/api/diff",
         "/api/workspace",
         "/api/workspace/file",
         "/api/navigate",

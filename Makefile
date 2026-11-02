@@ -11,7 +11,7 @@ build: web
 
 check: web
 	cd web && npm test
-	node --test extension/extension.test.mjs
+	node --test extension/*.test.mjs scripts/*.test.mjs
 	go vet ./...
 	FJORD_TEST_GOPLS=1 FJORD_TEST_TOFU_LS=1 go test -race ./...
 	@test -z "$$(gofmt -l cmd internal assets.go)"

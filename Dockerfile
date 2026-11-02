@@ -17,7 +17,9 @@ RUN GOBIN=/out sh scripts/install-language-servers.sh
 COPY . .
 COPY --from=web /src/web/dist ./web/dist
 ARG APP_VERSION
-RUN go build -trimpath -ldflags "-X main.version=${APP_VERSION}" -o /out/fjord ./cmd/fjord
+ARG VERSION
+RUN release_version="${VERSION#v}" \
+    && go build -trimpath -ldflags "-X main.version=${release_version:-$APP_VERSION}" -o /out/fjord ./cmd/fjord
 
 FROM debian:bookworm-slim
 RUN apt-get update \

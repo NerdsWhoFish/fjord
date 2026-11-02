@@ -14,6 +14,8 @@ import type { SyntaxRequest } from "./syntax-types";
 import { insertSuggestion, suggestionUnavailable } from "./suggestion";
 import "./comment-composer.css";
 import { ConversationTimeline } from "./ConversationTimeline";
+import { MarkdownContent } from "./MarkdownContent";
+import { MarkdownEditor } from "./MarkdownEditor";
 
 export interface ReviewDraft {
   comments: DraftComment[];
@@ -127,6 +129,7 @@ export function ReviewPanel({
   onCloseReview,
 }: Props) {
   const [comment, setComment] = useState("");
+  const [commentPreview, setCommentPreview] = useState(false);
   const [reply, setReply] = useState<Record<number, string>>({});
   const [sending, setSending] = useState(false);
   const [replying, setReplying] = useState<number>();
@@ -162,6 +165,7 @@ export function ReviewPanel({
   useEffect(() => {
     suggestionSelection.current = undefined;
     setComment("");
+    setCommentPreview(false);
     if (pendingComment) commentDialog.current?.showModal();
     else commentDialog.current?.close();
   }, [pendingComment]);
@@ -251,8 +255,9 @@ export function ReviewPanel({
                   <label htmlFor={`draft-edit-${item.id}`}>
                     Edit draft comment
                   </label>
-                  <textarea
+                  <MarkdownEditor
                     id={`draft-edit-${item.id}`}
+                    label="Edit draft comment"
                     rows={6}
                     value={editing.body}
                     disabled={sending}
@@ -290,7 +295,7 @@ export function ReviewPanel({
                   </div>
                 </div>
               ) : (
-                <p>{item.body}</p>
+                <MarkdownContent>{item.body}</MarkdownContent>
               )}
               <div className="draft-actions">
                 {item.source === "ai" && (
@@ -322,8 +327,9 @@ export function ReviewPanel({
             </article>
           ))}
           <label htmlFor="review-summary">Review summary</label>
-          <textarea
+          <MarkdownEditor
             id="review-summary"
+            label="Review summary"
             rows={5}
             disabled={sending}
             value={draft.body}
@@ -409,13 +415,15 @@ export function ReviewPanel({
                   ? `:${commentLineLabel(thread.line, thread.startLine)}`
                   : " (outdated)"}
               </code>
-              <p>{thread.body}</p>
+              <MarkdownContent>{thread.body}</MarkdownContent>
               <label className="sr-only" htmlFor={`reply-${thread.id}`}>
                 Reply to {thread.author}
               </label>
-              <textarea
+              <MarkdownEditor
                 id={`reply-${thread.id}`}
+                label={`Reply to ${thread.author}`}
                 rows={2}
+                disabled={demo || replying !== undefined}
                 placeholder="Write a reply..."
                 value={reply[thread.id] || ""}
                 onChange={(e) =>
@@ -553,6 +561,7 @@ export function ReviewPanel({
                   start: inserted.codeStart,
                   end: inserted.codeEnd,
                 };
+                setCommentPreview(false);
                 setComment(inserted.body);
               }}
             >
@@ -575,9 +584,12 @@ export function ReviewPanel({
               {suggestionReason}
             </p>
           )}
-          <textarea
+          <MarkdownEditor
             id="line-comment"
-            ref={commentInput}
+            label="Comment"
+            textareaRef={commentInput}
+            preview={commentPreview}
+            onPreviewChange={setCommentPreview}
             autoFocus
             rows={9}
             value={comment}

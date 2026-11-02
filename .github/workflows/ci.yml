@@ -3,6 +3,7 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_call:
 permissions:
   contents: read
 jobs:
@@ -25,6 +26,14 @@ jobs:
           node-version: 22
           cache: npm
           cache-dependency-path: web/package-lock.json
+      - name: Select Chrome for extension packaging tests
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "macOS" ]; then
+            echo "CHROME_BIN=/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" >> "$GITHUB_ENV"
+          else
+            echo "CHROME_BIN=google-chrome" >> "$GITHUB_ENV"
+          fi
       - name: Install language servers
         run: sh scripts/install-language-servers.sh
       - name: Install Linux sandbox

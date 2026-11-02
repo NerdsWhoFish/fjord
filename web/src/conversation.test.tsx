@@ -33,7 +33,7 @@ describe("PR conversation", () => {
     expect(html).toContain("Approved");
     expect(html).toContain("Pull request description");
   });
-  it("escapes untrusted comment bodies and rejects non-GitHub links", () => {
+  it("strips executable comment HTML and rejects non-GitHub links", () => {
     const html = renderToStaticMarkup(
       <ConversationTimeline
         pr={demoPR}
@@ -49,8 +49,8 @@ describe("PR conversation", () => {
         ]}
       />,
     );
-    expect(html).toContain("&lt;script&gt;");
     expect(html).not.toContain("<script>");
+    expect(html).not.toContain("alert(1)");
     expect(html).not.toContain("javascript:");
   });
 });

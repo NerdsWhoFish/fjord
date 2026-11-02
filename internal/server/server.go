@@ -76,6 +76,7 @@ func New(c Config) http.Handler {
 	s.route("/api/config", s.configHandler)
 	s.route("/api/pr", s.load)
 	s.route("/api/content", s.content)
+	s.route("/api/diff", s.fileDiff)
 	s.route("/api/workspace", s.workspace)
 	s.route("/api/workspace/file", s.file)
 	s.route("/api/navigate", s.navigate)
@@ -101,7 +102,8 @@ func New(c Config) http.Handler {
 		s.mux.Handle("GET /", staticHandler(c.Assets))
 	}
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
+		// GitHub attachment URLs redirect to its dedicated user-asset bucket.
+		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' https://github.com/user-attachments/ https://*.githubusercontent.com https://github-production-user-asset-6210df.s3.amazonaws.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
 		w.Header().Set("X-Content-Type-Options", "nosniff")
 		w.Header().Set("Referrer-Policy", "no-referrer")
 		w.Header().Set("X-Frame-Options", "DENY")
@@ -238,6 +240,18 @@ func (s *Server) content(w http.ResponseWriter, r *http.Request) error {
 		return err
 	}
 	jsonReply(w, map[string]string{"content": c})
+	return nil
+}
+func (s *Server) fileDiff(w http.ResponseWriter, r *http.Request) error {
+	var in github.DiffRequest
+	if err := decode(r, &in); err != nil {
+		return err
+	}
+	result, err := github.ReconstructDiff(r.Context(), in, s.config.GitHub.Content)
+	if err != nil {
+		return err
+	}
+	jsonReply(w, result)
 	return nil
 }
 func (s *Server) workspace(w http.ResponseWriter, r *http.Request) error {

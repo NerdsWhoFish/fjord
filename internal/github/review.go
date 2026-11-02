@@ -99,6 +99,9 @@ func validateCommentRanges(pr PR, comments []Comment) error {
 			start = comment.Line
 		}
 		for _, file := range pr.Files {
+			if file.Reviewable != nil && !*file.Reviewable {
+				continue
+			}
 			if file.Path == comment.Path && containsRange(file.Patch, comment.Side, start, comment.Line) {
 				found = true
 				break
