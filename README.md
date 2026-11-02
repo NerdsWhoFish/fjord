@@ -5,20 +5,22 @@ Review GitHub pull requests with semantic code navigation and MCP assistance fro
 Keep the diff, surrounding code, and your review together.
 Follow symbols to their definitions or implementations, inspect references, and submit reviews to GitHub.
 This is an early local application.
-Go and Terraform navigation work out of the box; operator-defined language servers add other languages.
+The container includes Go, OpenTofu/Terraform, YAML, JSON/JSONC, JavaScript/TypeScript, Python, Bash, Dockerfile, HTML, and CSS/SCSS language servers. Operator-defined profiles add or replace servers.
 
 ## Run
 
 Published binaries, container images, and signed Chrome extension packages use the [Quill release workflow](docs/releases.md).
 The extension also ships as a ZIP for Chrome's local **Load unpacked** installation.
 
-Requirements: Go 1.27+, Node.js 22+, GitHub CLI, and `gopls` for Go navigation or `tofu-ls` for Terraform navigation on `PATH`.
+Requirements: Go 1.27+, Node.js 22.22.2+, GitHub CLI, and `gopls` for Go navigation or `tofu-ls` for Terraform navigation on `PATH`.
 Navigation requires macOS `sandbox-exec` or Linux Bubblewrap (`bwrap` with user namespaces enabled).
 Fjord refuses to run an unconfined language server.
 
 ```sh
 gh auth login --hostname github.com
 sh scripts/install-language-servers.sh
+sh scripts/install-node-language-servers.sh
+export FJORD_LANGUAGE_BUNDLE="$PWD/languages"
 make build
 ./bin/fjord
 ```
@@ -55,7 +57,7 @@ To serve behind a TLS reverse proxy, explicitly configure the public origin:
 The proxy must preserve the configured Host header. Fjord does not infer trust from forwarded headers.
 This configures routing; it does not provision DNS, TLS, or a public deployment.
 
-`make check` requires both language servers and runs frontend tests/build, Go vet, race tests, real sandboxed `gopls` and `tofu-ls` integration tests, and formatting checks.
+`make check` requires the installed Go and Node language servers and runs frontend tests/build, Go vet, race tests, real sandboxed language-server integration tests, and formatting checks.
 `make install` checks and installs the embedded native application to `~/bin/fjord`.
 Make targets disable inherited Go workspaces.
 
@@ -118,21 +120,21 @@ Syntax colors do not imply language-server support: semantic actions depend on t
 
 Pass `-config /path/to/language-servers.yaml` or set `FJORD_CONFIG` to an operator-owned YAML file.
 Fjord reads it at startup, never from the reviewed repository. Restart after changes.
-The [Python example](examples/language-servers.yaml) configures Pyright through an explicit Node executable.
-Go (`go`), Terraform (`terraform`), and Terraform variables (`terraform-vars`) profiles remain available unless replaced or disabled.
+The [Python example](examples/language-servers.yaml) changes bundled Pyright to strict type checking through an explicit Node executable.
+All built-in profiles remain available unless replaced or disabled.
 
 ```yaml
 languageServers:
   python:
-    command: [/opt/lsp/node, --openssl-config=/dev/null, /opt/lsp/node_modules/pyright/dist/pyright-langserver.js, --stdio]
+    command: [node, --openssl-config=/dev/null, /opt/fjord/languages/node_modules/pyright/langserver.index.js, --stdio]
     files: ["**/*.py", "**/*.pyi"]
     languageId: python
     rootMarkers: [pyproject.toml, pyrightconfig.json, setup.py]
-    runtimePaths: [/opt/lsp]
+    runtimePaths: [/opt/fjord/languages]
     settings:
       python:
         analysis:
-          typeCheckingMode: basic
+          typeCheckingMode: strict
 ```
 
 Profiles support these fields:
@@ -158,6 +160,10 @@ Configuration rejects unknown fields, duplicate keys, unsafe paths, and oversize
 Install the server and its dependencies on the host or in a derived container image.
 Declare only the runtime paths it needs, never your whole home directory or credential folders.
 Some packaged runtimes, including Homebrew Node, require additional shared-library directories.
+For bundled Node profiles, `FJORD_NODE_RUNTIME_PATHS` accepts an OS-separated list of precise additional read-only runtime paths.
+On macOS, inspect `otool -L "$(command -v node)"` and its libraries; include each required library directory, including the Node library directory itself, without granting access to the entire Homebrew prefix.
+`FJORD_LANGUAGE_BUNDLE` selects the absolute bundle directory, defaulting to `/opt/fjord/languages`; the native installer defaults to this checkout's `languages` directory and honors the variable when set.
+Both variables are operator configuration and pass the same runtime-path validation as YAML profiles.
 Servers receive a clean environment, read-only source, temporary writable storage, and no network access.
 Repository configuration may influence the language server itself, so its executable and runtime paths must be trusted.
 Fjord does not run repository installation hooks or fetch dependencies for it.
@@ -196,8 +202,13 @@ Available results still depend on installed dependencies and the server's indexi
 
 ## Containers
 
-The Dockerfile includes `gopls`, `tofu-ls`, Go, GitHub CLI, and Bubblewrap.
-Build the base image and optional Python variant:
+The Dockerfile includes `gopls`, `tofu-ls`, Go, Node, GitHub CLI, Bubblewrap, and the pinned [Node language-server bundle](languages/package.json).
+The bundle installs with `npm ci --ignore-scripts`; no package lifecycle hooks run.
+TypeScript uses the bundled compiler, with automatic typing downloads disabled.
+Bash navigation does not run ShellCheck, shfmt, or explainshell.
+YAML uses bundled Kubernetes and GitHub Actions schemas; JSON/JSONC uses a bundled TypeScript configuration schema.
+Schema discovery and downloads are disabled. All servers remain network-isolated.
+Build the base image or the example strict-Python configuration:
 
 ```sh
 docker build --build-arg APP_VERSION="$(git rev-parse HEAD)" -t fjord:local .
@@ -214,14 +225,27 @@ Fjord fails closed; do not work around that with a privileged container or by re
 The base AMD64 image has been built and exercised on Talos Kubernetes with real gopls, tofu-ls, and sandbox isolation tests.
 That deployment uses a pod user namespace (`hostUsers: false`), `procMount: Unmasked` for nested procfs, and a Localhost seccomp profile derived from containerd's default with Bubblewrap namespace setup syscalls allowed.
 It remains nonroot, with all capabilities dropped and privilege escalation disabled.
-The optional Python container recipe has not yet been exercised.
+The Python recipe only supplies an operator configuration; Pyright is included in the base image.
 
 ## Navigation limits
 
 The language server is selected from the file being inspected rather than initialized as Go for every repository.
-Go navigation uses the nearest Go module with standard-library, local, or vendored dependencies.
-Network access, CGO, automatic toolchain downloads, and VCS dependency fetching are disabled.
-Missing dependencies are reported rather than presenting incomplete results as complete.
+Go navigation uses the nearest Go module. Standard-library, in-repository local replacements, and vendored dependencies work offline.
+For unvendored dependencies, Fjord prepares the required versions pinned by the revision's `go.mod` and `go.sum` before starting gopls.
+Only `proxy.golang.org` and its Google Storage artifact redirects are contacted. Downloads have time, transfer, expanded-size, file-count, and module-count limits.
+Module metadata checksums are verified; archive extraction and checksum verification run through Go inside the network-disabled sandbox.
+The resulting dependency cache is read-only to gopls. No repository installation scripts, GitHub credentials, VCS commands, CGO, or automatic toolchain downloads are allowed.
+Dependencies enable analysis of the PR's own code; navigation into external dependency source is not currently exposed.
+
+For private dependencies or fully offline operation, set `FJORD_GO_MODULE_CACHE` to an operator-populated Go module cache, normally the directory reported by `go env GOMODCACHE`.
+Populate it with the reviewed project's `go mod download` outside Fjord, then mount it read-only in the service.
+Fjord reads regular artifacts under its `cache/download` directory and verifies them against the PR's committed checksums.
+When this option is set, cache misses fail without falling back to the public proxy, so private module names are not disclosed.
+The cache must include the project's public dependencies as well.
+Incomplete module metadata, unavailable dependencies, checksum failures, inconsistent vendoring, and incompatible installed Go toolchains produce distinct errors with next steps.
+Legacy modules with a `go` directive below 1.17 can omit transitive requirements that Fjord needs for preparation.
+If their dependency graph cannot be loaded, vendor the dependencies or intentionally upgrade the module's `go` directive to 1.17 or newer and commit the resulting `go mod tidy` changes.
+Running tidy alone while retaining the older directive does not populate the modern dependency graph.
 
 Terraform navigation uses `tofu-ls` to index configuration and local modules without running `tofu init`.
 Supported Terraform files are `.tf`, `.tf.json`, `.tfvars`, `.tfvars.json`, and `.tofu`.
@@ -291,8 +315,9 @@ The Go packages separate GitHub, navigation, telemetry, and HTTP boundaries; MCP
 `web/` contains React/TypeScript.
 Theme palettes live in `web/src/theme.css`; components consume semantic CSS variables for surfaces, controls, diff states, file-tree states, and syntax tokens.
 To add a named theme, define its palette, extend the theme choices in `web/src/theme.ts` and `web/src/ThemeToggle.tsx`, and include its contrast cases in `web/src/theme.test.ts`.
-`make check` and CI require real `gopls`, `tofu-ls`, and a supported sandbox.
+`make check` and CI require real `gopls`, `tofu-ls`, the pinned Node bundle, and a supported sandbox.
 `make test` runs Go unit tests; use `FJORD_TEST_GOPLS=1 FJORD_TEST_TOFU_LS=1 make test` to include language-server integration tests.
+Set `FJORD_TEST_NODE_LSP=1` with `FJORD_LANGUAGE_BUNDLE` pointing at the installed bundle to exercise Node server navigation, offline schema diagnostics, and the TypeScript repository-plugin isolation test.
 Set `FJORD_TEST_PYRIGHT_CONFIG` to a working Python profile YAML to also exercise real sandboxed Pyright definitions, references, and hover.
 
 Goblin currently provides a foundation and UI concepts, not an implemented PR engine.

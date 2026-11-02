@@ -16,6 +16,8 @@ jobs:
       GOWORK: 'off'
       FJORD_TEST_GOPLS: '1'
       FJORD_TEST_TOFU_LS: '1'
+      FJORD_TEST_NODE_LSP: '1'
+      FJORD_LANGUAGE_BUNDLE: ${{ github.workspace }}/languages
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -25,7 +27,9 @@ jobs:
         with:
           node-version: 22
           cache: npm
-          cache-dependency-path: web/package-lock.json
+          cache-dependency-path: |
+            web/package-lock.json
+            languages/package-lock.json
       - name: Select Chrome for extension packaging tests
         shell: bash
         run: |
@@ -35,7 +39,9 @@ jobs:
             echo "CHROME_BIN=google-chrome" >> "$GITHUB_ENV"
           fi
       - name: Install language servers
-        run: sh scripts/install-language-servers.sh
+        run: |
+          sh scripts/install-language-servers.sh
+          sh scripts/install-node-language-servers.sh
       - name: Install Linux sandbox
         if: runner.os == 'Linux'
         run: sudo apt-get update && sudo apt-get install -y bubblewrap

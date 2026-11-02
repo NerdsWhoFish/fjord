@@ -32,6 +32,16 @@ archives:
       - README.md
       - src: examples/language-servers.yaml
         dst: examples
+      - src: scripts/install-language-servers.sh
+        dst: scripts
+      - src: scripts/install-node-language-servers.sh
+        dst: scripts
+      - src: languages/package.json
+        dst: languages
+      - src: languages/package-lock.json
+        dst: languages
+      - src: languages/README.md
+        dst: languages
 
 checksum:
   name_template: checksums.txt

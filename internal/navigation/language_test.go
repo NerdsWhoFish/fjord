@@ -49,7 +49,7 @@ func TestRouteFileSelectsNestedModule(t *testing.T) {
 			t.Fatalf("%s: %+v %v", name, route, err)
 		}
 	}
-	for _, name := range []string{"script.py", ".terraform.lock.hcl", "main.tftest.hcl", "README.md", "main.tofu.json", "example.tofuvars", "example.tofuvars.json"} {
+	for _, name := range []string{".terraform.lock.hcl", "main.tftest.hcl", "README.md", "example.tofuvars"} {
 		if _, err := routeFile(root, name); err == nil || strings.Contains(err.Error(), "Go packages") {
 			t.Fatalf("%s: %v", name, err)
 		}

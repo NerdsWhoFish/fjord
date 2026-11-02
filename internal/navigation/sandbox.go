@@ -21,6 +21,16 @@ import (
 )
 
 func startProfileServer(ctx context.Context, dir, root string, profile lspconfig.Profile) (*rpcClient, map[string]bool, error) {
+	profile, cleanupSchemas, err := prepareProfileSchemas(dir, profile)
+	if err != nil {
+		return nil, nil, err
+	}
+	started := false
+	defer func() {
+		if !started {
+			cleanupSchemas()
+		}
+	}()
 	config, err := configureProfile(ctx, dir, root, profile)
 	if err != nil {
 		return nil, nil, err
@@ -51,6 +61,7 @@ func startProfileServer(ctx context.Context, dir, root string, profile lspconfig
 		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 		stop()
 		<-exited
+		cleanupSchemas()
 	}, profile.Settings)
 	initCtx, cancelInit := context.WithTimeout(ctx, 30*time.Second)
 	defer cancelInit()
@@ -120,6 +131,7 @@ func startProfileServer(ctx context.Context, dir, root string, profile lspconfig
 	}
 	_ = json.Unmarshal(initialized.Capabilities["codeActionProvider"], &codeActions)
 	capabilities["resolveCodeAction"] = codeActions.ResolveProvider
+	started = true
 	return client, capabilities, nil
 }
 
@@ -182,6 +194,8 @@ func configureProfile(ctx context.Context, dir, root string, profile lspconfig.P
 	}
 	config.env = []string{
 		"HOME=" + filepath.Join(dir, "home"), "TMPDIR=" + filepath.Join(dir, "tmp"), "XDG_CACHE_HOME=" + filepath.Join(dir, "cache"),
+		// Node subprocesses can replace execArgv, losing the explicit OpenSSL flag.
+		"OPENSSL_CONF=/dev/null",
 		"GOTELEMETRY=off", "GOMAXPROCS=2", "GOMEMLIMIT=512MiB",
 	}
 	for key, value := range profile.Environment {
@@ -203,7 +217,11 @@ func configureProfile(ctx context.Context, dir, root string, profile lspconfig.P
 		"PATH="+filepath.Dir(goBin)+":/usr/bin:/bin", "GOTMPDIR="+filepath.Join(dir, "tmp"),
 		"GOCACHE="+filepath.Join(dir, "cache"), "GOPATH="+filepath.Join(dir, "go"), "GOPLSCACHE="+filepath.Join(dir, "gopls-cache"),
 		"GOENV=off", "GOWORK=off", "GOTOOLCHAIN=local", "GOPROXY=off", "GOSUMDB=off", "GOVCS=*:off", "CGO_ENABLED=0",
+		"GOPRIVATE=", "GONOSUMDB=", "GONOPROXY=", "GOFLAGS=-mod=readonly",
 	)
+	if info, err := os.Stat(filepath.Join(root, "vendor", "modules.txt")); err == nil && info.Mode().IsRegular() {
+		config.env = replaceGoEnv(config.env, map[string]string{"GOFLAGS": "-mod=vendor"})
+	}
 	probeCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 	defer cancel()
 	probe := exec.CommandContext(probeCtx, goBin, "env", "GOROOT")
@@ -216,8 +234,15 @@ func configureProfile(ctx context.Context, dir, root string, profile lspconfig.P
 	if err != nil {
 		return config, errors.New("cannot resolve Go toolchain")
 	}
-	if err := validatePackages(ctx, dir, root, goBin, config.runtimeRoot, config.env); err != nil {
+	moduleCache, err := prepareGoDependencies(ctx, dir, root, goBin, config.runtimeRoot, config.env)
+	if err != nil {
 		return config, err
+	}
+	if moduleCache != "" {
+		config.env = replaceGoEnv(config.env, map[string]string{"GOMODCACHE": moduleCache})
+	}
+	if err := validatePackages(ctx, dir, root, goBin, config.runtimeRoot, config.env); err != nil {
+		return config, goGraphError(root, err)
 	}
 	config.readPaths = append(config.readPaths, config.runtimeRoot)
 	return config, nil
@@ -348,18 +373,21 @@ func validatePackages(ctx context.Context, dir, root, goBin, goRoot string, env 
 	defer timer.Stop()
 	stopOnCancel := context.AfterFunc(ctx, cancel)
 	defer stopOnCancel()
-	var output boundedBuffer
+	var output, stderr boundedBuffer
 	cmd.Stdout = &output
-	cmd.Stderr = io.Discard
+	cmd.Stderr = &stderr
 	if err := cmd.Run(); err != nil {
-		return errors.New("isolated Go package loading failed; check the sandbox and this file's Go module")
+		if ctx.Err() != nil {
+			return errors.New("isolated Go package loading timed out")
+		}
+		return goPackageError(stderr.String())
 	}
 	decoder := json.NewDecoder(&output)
 	count := 0
 	for {
 		var pkg struct {
-			Error      *json.RawMessage
-			DepsErrors []json.RawMessage
+			Error      *struct{ Err string }
+			DepsErrors []struct{ Err string }
 			Incomplete bool
 		}
 		err := decoder.Decode(&pkg)
@@ -371,7 +399,13 @@ func validatePackages(ctx context.Context, dir, root, goBin, goRoot string, env 
 		}
 		count++
 		if pkg.Error != nil || len(pkg.DepsErrors) > 0 || pkg.Incomplete {
-			return errors.New("Go packages could not be fully loaded; navigation requires local or vendored dependencies and a compatible installed Go toolchain")
+			if pkg.Error != nil {
+				return goPackageError(pkg.Error.Err)
+			}
+			if len(pkg.DepsErrors) > 0 {
+				return goPackageError(pkg.DepsErrors[0].Err)
+			}
+			return goPackageError("")
 		}
 	}
 	if count == 0 {
