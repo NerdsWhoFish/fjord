@@ -18,6 +18,9 @@ import (
 	"time"
 
 	"github.com/NerdsWhoFish/fjord/internal/lspconfig"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/attribute"
+	"go.opentelemetry.io/otel/codes"
 )
 
 func startProfileServer(ctx context.Context, dir, root string, profile lspconfig.Profile) (*rpcClient, map[string]bool, error) {
@@ -363,7 +366,14 @@ func (b *boundedBuffer) Write(p []byte) (int, error) {
 	return b.Buffer.Write(p)
 }
 
-func validatePackages(ctx context.Context, dir, root, goBin, goRoot string, env []string) error {
+func validatePackages(ctx context.Context, dir, root, goBin, goRoot string, env []string) (err error) {
+	ctx, span := otel.Tracer("fjord/navigation").Start(ctx, "navigation.go.packages")
+	defer func() {
+		if err != nil {
+			span.SetStatus(codes.Error, "Go workspace package loading failed")
+		}
+		span.End()
+	}()
 	cmd, cancel, err := sandboxCommand(dir, root, goBin, goRoot, env, "list", "-deps", "-e", "-json", "./...")
 	if err != nil {
 		return err
@@ -382,34 +392,69 @@ func validatePackages(ctx context.Context, dir, root, goBin, goRoot string, env 
 		}
 		return goPackageError(stderr.String())
 	}
-	decoder := json.NewDecoder(&output)
-	count := 0
+	summary, err := inspectGoPackages(&output)
+	span.SetAttributes(
+		attribute.Int("package.requested_count", summary.requested),
+		attribute.Int("package.usable_count", summary.usable),
+		attribute.Int("package.error_count", summary.incomplete),
+		attribute.Bool("package.partial_workspace", summary.usable > 0 && summary.incomplete > 0),
+	)
+	return err
+}
+
+type goPackageSummary struct {
+	requested  int
+	usable     int
+	incomplete int
+}
+
+func inspectGoPackages(metadata io.Reader) (goPackageSummary, error) {
+	decoder := json.NewDecoder(metadata)
+	var summary goPackageSummary
+	var firstError error
 	for {
 		var pkg struct {
-			Error      *struct{ Err string }
-			DepsErrors []struct{ Err string }
-			Incomplete bool
+			DepOnly      bool
+			GoFiles      []string
+			TestGoFiles  []string
+			XTestGoFiles []string
+			Error        *struct{ Err string }
+			DepsErrors   []struct{ Err string }
+			Incomplete   bool
 		}
 		err := decoder.Decode(&pkg)
 		if errors.Is(err, io.EOF) {
 			break
 		}
 		if err != nil {
-			return errors.New("invalid Go package metadata")
+			return summary, errors.New("invalid Go package metadata")
 		}
-		count++
-		if pkg.Error != nil || len(pkg.DepsErrors) > 0 || pkg.Incomplete {
+		if pkg.DepOnly {
+			continue
+		}
+		summary.requested++
+		if pkg.Error == nil && len(pkg.DepsErrors) == 0 && !pkg.Incomplete && len(pkg.GoFiles)+len(pkg.TestGoFiles)+len(pkg.XTestGoFiles) > 0 {
+			summary.usable++
+			continue
+		}
+		summary.incomplete++
+		if firstError == nil {
 			if pkg.Error != nil {
-				return goPackageError(pkg.Error.Err)
+				firstError = goPackageError(pkg.Error.Err)
+			} else if len(pkg.DepsErrors) > 0 {
+				firstError = goPackageError(pkg.DepsErrors[0].Err)
+			} else {
+				firstError = goPackageError("")
 			}
-			if len(pkg.DepsErrors) > 0 {
-				return goPackageError(pkg.DepsErrors[0].Err)
-			}
-			return goPackageError("")
 		}
 	}
-	if count == 0 {
-		return errors.New("no Go packages found in this file's module")
+	if summary.requested == 0 {
+		return summary, errors.New("no Go packages found in this file's module")
 	}
-	return nil
+	// Generated assets or broken siblings must not prevent gopls from serving
+	// loadable repository packages. Dependency-only successes do not qualify.
+	if summary.usable > 0 {
+		return summary, nil
+	}
+	return summary, firstError
 }

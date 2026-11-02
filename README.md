@@ -243,6 +243,9 @@ Fjord reads regular artifacts under its `cache/download` directory and verifies 
 When this option is set, cache misses fail without falling back to the public proxy, so private module names are not disclosed.
 The cache must include the project's public dependencies as well.
 Incomplete module metadata, unavailable dependencies, checksum failures, inconsistent vendoring, and incompatible installed Go toolchains produce distinct errors with next steps.
+Once at least one repository package can load, gopls starts even if other packages have errors, such as missing generated embed assets.
+Usable packages remain navigable while gopls reports source diagnostics; results involving incomplete packages may be unavailable.
+If no repository package can load, Fjord retains the actionable package-loading error instead of treating successful standard-library imports as a usable workspace.
 Legacy modules with a `go` directive below 1.17 can omit transitive requirements that Fjord needs for preparation.
 If their dependency graph cannot be loaded, vendor the dependencies or intentionally upgrade the module's `go` directive to 1.17 or newer and commit the resulting `go mod tidy` changes.
 Running tidy alone while retaining the older directive does not populate the modern dependency graph.
