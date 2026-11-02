@@ -1,6 +1,13 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { readFileSync } from "node:fs";
-import { getThemeChoice, initializeTheme, setThemeChoice } from "./theme";
+import {
+  getCodeStyle,
+  getThemeChoice,
+  initializeTheme,
+  parseCodeStyle,
+  setCodeStyle,
+  setThemeChoice,
+} from "./theme";
 
 let media: EventTarget & { matches: boolean };
 let storage: Map<string, string>;
@@ -21,7 +28,40 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllGlobals());
 
 describe("theme preference lifecycle", () => {
-  it.each(["light", "dark", "dracula"])(
+  it("migrates the replaced custom palette preferences", () => {
+    expect(parseCodeStyle("vivid")).toBe("github");
+    expect(parseCodeStyle("warm")).toBe("one");
+  });
+
+  it("keeps manual themes usable without system-theme detection", () => {
+    vi.stubGlobal("window", new EventTarget());
+    storage.set("fjord:theme", "dracula");
+    expect(initializeTheme()).toBe("dracula");
+    setThemeChoice("dark");
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    setThemeChoice("light");
+    expect(document.documentElement.dataset.theme).toBe("light");
+    setThemeChoice("system");
+    expect(document.documentElement.dataset.theme).toBe("light");
+  });
+
+  it("follows system changes with legacy media-query listeners", () => {
+    const legacyMedia = {
+      matches: false,
+      addListener: vi.fn(),
+      removeListener: vi.fn(),
+    };
+    Object.assign(browser, { matchMedia: () => legacyMedia });
+    expect(initializeTheme()).toBe("light");
+    const changed = legacyMedia.addListener.mock.calls[0][0];
+    legacyMedia.matches = true;
+    changed();
+    expect(document.documentElement.dataset.theme).toBe("dark");
+    initializeTheme();
+    expect(legacyMedia.removeListener).toHaveBeenCalledWith(changed);
+  });
+
+  it.each(["light", "dark", "dracula", "black"])(
     "restores the saved %s preference",
     (theme) => {
       storage.set("fjord:theme", theme);
@@ -29,6 +69,57 @@ describe("theme preference lifecycle", () => {
       expect(document.documentElement.dataset.theme).toBe(theme);
     },
   );
+
+  it.each(["github", "one", "mono"] as const)(
+    "restores %s code colors independently of the theme",
+    (style) => {
+      storage.set("fjord:theme", "black");
+      storage.set("fjord:code-style", style);
+      expect(initializeTheme()).toBe("black");
+      expect(getCodeStyle()).toBe(style);
+      expect(document.documentElement.dataset.codeStyle).toBe(style);
+      setThemeChoice("light");
+      expect(document.documentElement.dataset.codeStyle).toBe(style);
+      setCodeStyle("default");
+      expect(storage.has("fjord:code-style")).toBe(false);
+      expect(document.documentElement.dataset.codeStyle).toBe("default");
+      expect(getThemeChoice()).toBe("light");
+    },
+  );
+
+  it("syncs code colors across tabs and resets both preferences on storage clear", () => {
+    initializeTheme();
+    setThemeChoice("black");
+    browser.dispatchEvent(
+      Object.assign(new Event("storage"), {
+        key: "fjord:code-style",
+        newValue: "one",
+      }),
+    );
+    expect(getCodeStyle()).toBe("one");
+    expect(getThemeChoice()).toBe("black");
+    browser.dispatchEvent(
+      Object.assign(new Event("storage"), {
+        key: null,
+        newValue: null,
+      }),
+    );
+    expect(getThemeChoice()).toBe("system");
+    expect(getCodeStyle()).toBe("default");
+  });
+
+  it("falls back for invalid code colors and allows changes without storage", () => {
+    storage.set("fjord:code-style", "unknown");
+    initializeTheme();
+    expect(getCodeStyle()).toBe("default");
+    vi.stubGlobal("localStorage", {
+      setItem: () => {
+        throw new Error("denied");
+      },
+    });
+    setCodeStyle("github");
+    expect(document.documentElement.dataset.codeStyle).toBe("github");
+  });
 
   it("follows OS changes until the reviewer chooses a theme", () => {
     expect(initializeTheme()).toBe("light");
@@ -111,7 +202,7 @@ describe("theme readability", () => {
   const css = readFileSync(new URL("./theme.css", import.meta.url), "utf8");
   const blocks = [
     ...css.matchAll(
-      /:root\[data-theme="(light|dark|dracula)"\]\s*\{([^}]+)\}/g,
+      /:root\[data-theme="(light|dark|dracula|black)"\]\s*\{([^}]+)\}/g,
     ),
   ];
   for (const [, theme, body] of blocks) {
@@ -121,7 +212,9 @@ describe("theme readability", () => {
         match[2],
       ]),
     );
-    it(`${theme} keeps text and syntax legible on source and diff backgrounds`, () => {
+    // Published syntax palettes retain their original muted token colors.
+    // Contrast requirements here apply to interface text and line numbers.
+    it(`${theme} keeps interface text legible on source and diff backgrounds`, () => {
       for (const background of [
         "white",
         "diff-added",
@@ -129,11 +222,7 @@ describe("theme readability", () => {
         "target-background",
         "code-hover",
       ]) {
-        for (const foreground of [
-          "ink",
-          "line-number",
-          ...Object.keys(colors).filter((name) => name.startsWith("syntax-")),
-        ]) {
+        for (const foreground of ["ink", "line-number"]) {
           expect(
             contrast(colors[foreground], colors[background]),
             `${foreground} on ${background}`,

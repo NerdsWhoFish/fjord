@@ -6,6 +6,7 @@ import "@fontsource/ibm-plex-sans/600.css";
 import "@fontsource/ibm-plex-mono/400.css";
 import "./style.css";
 import "./theme.css";
+import "./code-styles.css";
 import { App } from "./App";
 import { initializeTheme } from "./ThemeToggle";
 import { captureError, startTelemetry } from "./telemetry";
