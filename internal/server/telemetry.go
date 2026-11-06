@@ -10,6 +10,7 @@ import (
 	"log/slog"
 	"math"
 	"net/http"
+	"strings"
 	"time"
 
 	"github.com/NerdsWhoFish/fjord/internal/telemetry"
@@ -31,7 +32,10 @@ func safeEnvelope(raw map[string]json.RawMessage, version string) map[string]any
 		Name string `json:"name"`
 	}
 	if json.Unmarshal(raw["events"], &events) == nil {
-		allowed := map[string]bool{"pr.load": true, "navigate": true, "review.submit": true, "assist": true, "reply": true, "view_changed": true}
+		allowed := map[string]bool{
+			"pr.load": true, "navigate": true, "review.submit": true, "assist": true, "reply": true, "view_changed": true,
+			"session_start": true, "session_resume": true, "session_extend": true, "page_load": true,
+		}
 		clean := []any{}
 		for _, e := range events {
 			if allowed[e.Name] && len(clean) < 20 {
@@ -47,16 +51,21 @@ func safeEnvelope(raw map[string]json.RawMessage, version string) map[string]any
 		Values map[string]float64 `json:"values"`
 	}
 	if json.Unmarshal(raw["measurements"], &measures) == nil {
-		allowed := map[string]bool{"CLS": true, "LCP": true, "FCP": true, "INP": true, "TTFB": true}
 		clean := []any{}
 		for _, m := range measures {
 			if m.Type != "web-vitals" && m.Type != "web-vital" {
 				continue
 			}
 			values := map[string]float64{}
-			for k, v := range m.Values {
-				if allowed[k] && !math.IsNaN(v) && !math.IsInf(v, 0) && v >= 0 && v < 1e9 {
-					values[k] = v
+			// Faro emits lowercase names. Keep older uppercase callers working,
+			// with the canonical key taking precedence when both are present.
+			for _, key := range []string{"cls", "fcp", "fid", "inp", "lcp", "ttfb"} {
+				v, ok := m.Values[key]
+				if !ok {
+					v, ok = m.Values[strings.ToUpper(key)]
+				}
+				if ok && !math.IsNaN(v) && !math.IsInf(v, 0) && v >= 0 && v < 1e9 {
+					values[key] = v
 				}
 			}
 			if len(values) > 0 && len(clean) < 10 {
