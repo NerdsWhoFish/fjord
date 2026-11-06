@@ -170,4 +170,5 @@ export interface SourceView {
 }
 export interface Config {
   telemetryEnabled: boolean;
+  publicMode?: boolean;
 }

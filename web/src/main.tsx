@@ -10,8 +10,11 @@ import "./code-styles.css";
 import { App } from "./App";
 import { initializeTheme } from "./ThemeToggle";
 import { captureError, startTelemetry } from "./telemetry";
+import { initializeAuth } from "./auth";
+import { PublicAccess } from "./PublicAccess";
 
 initializeTheme();
+initializeAuth();
 if (globalThis.__FJORD_CONFIG__?.telemetryEnabled) startTelemetry();
 ReactDOM.createRoot(document.getElementById("root")!, {
   onUncaughtError: (error) => captureError(error, "app.render"),
@@ -19,6 +22,8 @@ ReactDOM.createRoot(document.getElementById("root")!, {
   onRecoverableError: (error) => captureError(error, "app.render"),
 }).render(
   <React.StrictMode>
-    <App />
+    <PublicAccess>
+      <App />
+    </PublicAccess>
   </React.StrictMode>,
 );

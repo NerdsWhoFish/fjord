@@ -7,6 +7,7 @@ import {
   useState,
 } from "react";
 import { api } from "./api";
+import { isPublicMode } from "./auth";
 import { parsePRRoute, prPath } from "./pr-route";
 import { PRLoading } from "./PRLoading";
 import { reviewRedirect } from "./review-redirect";
@@ -986,7 +987,9 @@ export function App() {
               </button>
               <p className="connection-note">
                 <span className="live-dot" />
-                Uses your local GitHub CLI session.
+                {isPublicMode()
+                  ? "Connected with your GitHub token."
+                  : "Uses your local GitHub CLI session."}
               </p>
             </div>
             <div className="welcome-landscape" aria-hidden="true">

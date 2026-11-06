@@ -1,4 +1,5 @@
 import type { ReviewDraft } from "./ReviewPanel";
+import { authenticatedFetch } from "./auth";
 import type {
   DraftComment,
   Method,
@@ -62,7 +63,7 @@ export const sessionTransport: SessionTransport = async <T>(
   signal?: AbortSignal,
 ): Promise<T> => {
   const timeout = AbortSignal.timeout(30_000);
-  const response = await fetch(`/api/session/${endpoint}`, {
+  const response = await authenticatedFetch(`/api/session/${endpoint}`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -90,6 +91,7 @@ export function startReviewSession({
   onState,
   transport = sessionTransport,
   onError,
+  pollInterval = 2000,
 }: {
   pr: Pick<PullRequest, "url" | "headSHA" | "baseSHA">;
   snapshot: () => SessionSnapshot;
@@ -97,6 +99,7 @@ export function startReviewSession({
   onState: (state: SessionState) => void;
   transport?: SessionTransport;
   onError?: (error: unknown) => void;
+  pollInterval?: number;
 }) {
   let stopped = false;
   let disconnected = false;
@@ -121,7 +124,7 @@ export function startReviewSession({
     if (stopped || running) return;
     running = true;
     retryRequested = false;
-    let nextDelay = 2000;
+    let nextDelay = pollInterval;
     try {
       if (!sessionID) {
         onState({ status: "connecting" });
@@ -231,7 +234,10 @@ export function startReviewSession({
         completed.clear();
       }
       failures++;
-      nextDelay = Math.min(30_000, 2000 * 2 ** Math.min(failures - 1, 4));
+      nextDelay = Math.min(
+        30_000,
+        pollInterval * 2 ** Math.min(failures - 1, 4),
+      );
       onError?.(error);
       onState({
         id: sessionID,
