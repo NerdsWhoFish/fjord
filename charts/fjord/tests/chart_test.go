@@ -144,6 +144,27 @@ func TestIngressConfigAndReadOnlyCache(t *testing.T) {
 	}
 }
 
+func TestPublicModeHasNoServerCredential(t *testing.T) {
+	for _, secret := range []string{"", "existing-private-token"} {
+		documents := render(t, "--set", "publicMode=true,github.existingSecret="+secret)
+		container := field(t, documents["Deployment"], "spec", "template", "spec", "containers", 0)
+		found := false
+		for _, entry := range field(t, container, "env").([]any) {
+			name := field(t, entry, "name")
+			if name == "GH_TOKEN" || name == "GITHUB_TOKEN" {
+				t.Fatal("public deployment exposes a shared GitHub credential")
+			}
+			if name == "FJORD_PUBLIC_MODE" {
+				found = true
+				assertField(t, entry, "true", "value")
+			}
+		}
+		if !found {
+			t.Fatal("public deployment did not enable browser authentication")
+		}
+	}
+}
+
 func TestRejectUnsafeOrUnusableValues(t *testing.T) {
 	for name, values := range map[string]string{
 		"empty credential reference": "github.existingSecret=",
@@ -160,6 +181,7 @@ func TestRejectUnsafeOrUnusableValues(t *testing.T) {
 		"ingress with port":          "publicURL=http://example.com:4727,ingress.enabled=true",
 		"headers without endpoint":   "telemetry.existingSecret=telemetry",
 		"invalid digest":             "image.digest=sha256:not-a-digest",
+		"public shared module cache": "publicMode=true,goModuleCache.existingClaim=private-modules",
 	} {
 		t.Run(name, func(t *testing.T) {
 			if output, err := helm(t, "template", "review", "..", "--set", values); err == nil {

@@ -55,11 +55,16 @@ spec:
             - name: http
               containerPort: 4727
           env:
+            {{- if .Values.publicMode }}
+            - name: FJORD_PUBLIC_MODE
+              value: "true"
+            {{- else }}
             - name: GH_TOKEN
               valueFrom:
                 secretKeyRef:
                   name: {{ .Values.github.existingSecret | quote }}
                   key: {{ .Values.github.tokenKey | quote }}
+            {{- end }}
             - name: FJORD_ENVIRONMENT
               value: {{ .Values.telemetry.environment | quote }}
             {{- if .Values.languageServers.existingConfigMap }}
