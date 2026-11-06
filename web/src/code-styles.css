@@ -1,0 +1,66 @@
+/* Token palettes: GitHub VS Code theme (Primer) and Atom One syntax themes. */
+
+:root[data-code-style="github"] {
+  --syntax-comment: #6e7781;
+  --syntax-keyword: #cf222e;
+  --syntax-string: #0a3069;
+  --syntax-number: #0550ae;
+  --syntax-function: #8250df;
+  --syntax-type: #953800;
+  --syntax-property: #0550ae;
+  --syntax-operator: #cf222e;
+  --syntax-punctuation: #1f2328;
+  --syntax-tag: #116329;
+}
+
+:root[data-code-style="github"]:not([data-theme="light"]) {
+  --syntax-comment: #8b949e;
+  --syntax-keyword: #ff7b72;
+  --syntax-string: #a5d6ff;
+  --syntax-number: #79c0ff;
+  --syntax-function: #d2a8ff;
+  --syntax-type: #ffa657;
+  --syntax-property: #79c0ff;
+  --syntax-operator: #ff7b72;
+  --syntax-punctuation: #e6edf3;
+  --syntax-tag: #7ee787;
+}
+
+:root[data-code-style="one"] {
+  --syntax-comment: #a0a1a7;
+  --syntax-keyword: #a626a4;
+  --syntax-string: #50a14f;
+  --syntax-number: #986801;
+  --syntax-function: #4078f2;
+  --syntax-type: #c18401;
+  --syntax-property: #383a42;
+  --syntax-operator: #0184bc;
+  --syntax-punctuation: #383a42;
+  --syntax-tag: #e45649;
+}
+
+:root[data-code-style="one"]:not([data-theme="light"]) {
+  --syntax-comment: #5c6370;
+  --syntax-keyword: #c678dd;
+  --syntax-string: #98c379;
+  --syntax-number: #d19a66;
+  --syntax-function: #61afef;
+  --syntax-type: #e5c07b;
+  --syntax-property: #abb2bf;
+  --syntax-operator: #56b6c2;
+  --syntax-punctuation: #abb2bf;
+  --syntax-tag: #e06c75;
+}
+
+:root[data-code-style="mono"] {
+  --syntax-comment: var(--ink);
+  --syntax-keyword: var(--ink);
+  --syntax-string: var(--ink);
+  --syntax-number: var(--ink);
+  --syntax-function: var(--ink);
+  --syntax-type: var(--ink);
+  --syntax-property: var(--ink);
+  --syntax-operator: var(--ink);
+  --syntax-punctuation: var(--ink);
+  --syntax-tag: var(--ink);
+}

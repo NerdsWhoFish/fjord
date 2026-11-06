@@ -171,4 +171,8 @@ Install the pinned Go and Node servers before `make check`, with a supported OS 
 
 For targeted integration tests, use `FJORD_TEST_GOPLS=1`, `FJORD_TEST_TOFU_LS=1`, and `FJORD_TEST_NODE_LSP=1`. Node tests also need `FJORD_LANGUAGE_BUNDLE` and any native runtime paths. `FJORD_TEST_PYRIGHT_CONFIG` enables the separate custom-Pyright profile test.
 
-Theme palettes live in `web/src/theme.css`; named themes also need entries in `theme.ts`, `ThemeToggle.tsx`, and contrast coverage in `theme.test.ts`. Architectural decisions live in [adr/](../adr/README.md).
+Settings offers Light, Dark, Dracula, and True Black themes, or follows your system preference. Code colors can follow the theme or use GitHub, Atom One, or Monochrome independently. Both choices are saved in your browser.
+
+Theme palettes live in `web/src/theme.css`, and code color overrides live in `web/src/code-styles.css`. Register choices in `theme.ts` and cover every theme/code color combination in `theme.test.ts`. Architectural decisions live in [adr/](../adr/README.md).
+
+Syntax colors use the published [GitHub VS Code theme](https://github.com/primer/github-vscode-theme), [Atom One Light](https://github.com/atom/one-light-syntax) / [One Dark](https://github.com/atom/one-dark-syntax), and [Dracula Prism](https://github.com/dracula/prism) palettes. GitHub and Atom One switch between their light and dark variants with the page theme. Muted syntax comments retain the upstream palette colors.

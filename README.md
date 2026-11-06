@@ -8,7 +8,7 @@ A GitHub PR review UI with language-server navigation. Follow the code, leave co
 
 - Unified or split diffs, expandable context, inline threads, and multiline suggestions.
 - Definitions and references in one **Go to** menu, plus implementations, call hierarchies, diagnostics, and symbol search.
-- GitHub review decisions, Markdown previews, and Light, Dark, and Dracula themes.
+- GitHub review decisions, Markdown previews, and Light, Dark, Dracula, and True Black themes with independent code colors.
 - Bundled language servers for Go, Terraform/OpenTofu, JS/TS, Python, YAML, JSON, Bash, Dockerfiles, HTML, and CSS/SCSS.
 - Offline Kubernetes, GitHub Actions, and TypeScript configuration schemas. Bring your own servers or connect an AI client through MCP.
 
