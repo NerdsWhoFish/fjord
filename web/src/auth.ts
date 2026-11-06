@@ -81,6 +81,12 @@ export function initializeAuth() {
     publish({ status: "signed-out" });
     if (next) void connect(next.token, next);
   });
+  window.addEventListener("pageshow", (event) => {
+    if (!(event as PageTransitionEvent).persisted) return;
+    const saved = readCredential();
+    if (saved) void connect(saved.token, saved);
+    else forgetToken();
+  });
 }
 export async function connect(token: string, saved?: Credential) {
   token = token.trim();

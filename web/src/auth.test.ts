@@ -169,6 +169,16 @@ describe("browser GitHub credentials", () => {
     browser.dispatchEvent(event);
     expect(auth.authSnapshot().status).toBe("signed-out");
   });
+  it("checks stored credentials again when restored from the browser back cache", async () => {
+    const auth = await import("./auth");
+    auth.initializeAuth();
+    await auth.connect(token);
+    local.delete(key);
+    browser.dispatchEvent(
+      Object.assign(new Event("pageshow"), { persisted: true }),
+    );
+    expect(auth.authSnapshot().status).toBe("signed-out");
+  });
   it("ignores a late validation result after cancellation", async () => {
     const auth = await import("./auth");
     let resolve!: (response: Response) => void;
