@@ -11,6 +11,8 @@ imagePullSecrets: []
 
 # Must match the browser-facing origin, including a nonstandard port.
 publicURL: http://localhost:4727
+# Visitors provide their own GitHub token. No shared GitHub secret is mounted.
+publicMode: false
 github:
   existingSecret: fjord-github
   tokenKey: token

@@ -52,6 +52,33 @@ describe("browser review session synchronization", () => {
     vi.useRealTimers();
   });
 
+  it("respects the public polling budget while synchronizing immediately on open", async () => {
+    const send = transport(async (endpoint) =>
+      endpoint === "open" ? { id: "s1" } : { actions: [] },
+    );
+    const runner = startReviewSession({
+      pr,
+      snapshot: () => ({ draft: emptyDraft() }),
+      transport: send,
+      pollInterval: 10_000,
+      onState: () => {},
+      onAction: async () => {},
+    });
+    await flush();
+    expect(
+      send.mock.calls.filter(([endpoint]) => endpoint === "sync"),
+    ).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(9999);
+    expect(
+      send.mock.calls.filter(([endpoint]) => endpoint === "sync"),
+    ).toHaveLength(1);
+    await vi.advanceTimersByTimeAsync(1);
+    expect(
+      send.mock.calls.filter(([endpoint]) => endpoint === "sync"),
+    ).toHaveLength(2);
+    runner.stop();
+  });
+
   it("waits for action application before acknowledging and preserves newer human edits", async () => {
     let draft = emptyDraft();
     const applying = deferred<void>();
@@ -181,8 +208,9 @@ describe("browser review session synchronization", () => {
     runner.retry();
     await flush();
     expect(states.at(-1)).toMatchObject({ id: "s2", status: "connected" });
-    expect(send.mock.calls.filter((call) => call[0] === "open")[1][1])
-      .toMatchObject({ draft });
+    expect(
+      send.mock.calls.filter((call) => call[0] === "open")[1][1],
+    ).toMatchObject({ draft });
     runner.stop();
   });
 

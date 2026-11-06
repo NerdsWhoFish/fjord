@@ -14,6 +14,8 @@ A GitHub PR review UI with language-server navigation. Follow the code, leave co
 
 ## Quick start
 
+Use the hosted version at **[fjord.habibi.tools](https://fjord.habibi.tools)** with your own GitHub token, or run it locally:
+
 Install **Go 1.27.3+**, **Node.js 22.22.2+**, and the **GitHub CLI**.
 Use macOS with `sandbox-exec`, or Linux with Bubblewrap and unprivileged user namespaces enabled.
 
@@ -39,7 +41,7 @@ For another device on your trusted LAN:
 ./bin/fjord -addr 0.0.0.0:4727 -host 192.168.1.10
 ```
 
-Replace the IP with your server's address. **There is no application login; everyone connected uses the server's GitHub identity.**
+Replace the IP with your server's address. **Local mode shares the server's GitHub identity.** Use [public mode](docs/kubernetes.md#public-hosting) for separate visitor credentials.
 
 ## Review a PR
 

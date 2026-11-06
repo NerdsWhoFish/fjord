@@ -37,3 +37,36 @@ func TestBrowserAddress(t *testing.T) {
 		t.Fatal("accepted ambiguous public URL and host")
 	}
 }
+
+func TestPublicModeConfiguration(t *testing.T) {
+	for _, value := range []string{"", "false", "true", "TRUE", "wrong"} {
+		t.Setenv("FJORD_PUBLIC_MODE", value)
+		enabled, err := publicModeFromEnv()
+		if value == "wrong" {
+			if err == nil {
+				t.Fatal("invalid public mode silently fell back to shared credentials")
+			}
+		} else if err != nil || enabled != (value == "true" || value == "TRUE") {
+			t.Fatalf("unexpected public mode parse for %q", value)
+		}
+	}
+	for _, key := range []string{"FJORD_GO_MODULE_CACHE", "FJORD_LANGUAGE_BUNDLE", "FJORD_NODE_RUNTIME_PATHS"} {
+		t.Run(key, func(t *testing.T) {
+			t.Setenv(key, "/private/runtime")
+			if validatePublicRuntime(true, "") == nil || validatePublicRuntime(false, "") != nil {
+				t.Fatal("public runtime accepted shared file access or broke private mode")
+			}
+		})
+	}
+	if validatePublicRuntime(true, "/operator/config.yaml") == nil {
+		t.Fatal("public mode accepted custom mounts")
+	}
+	for _, origin := range []string{"https://fjord.habibi.tools", "http://localhost:4727", "http://127.0.0.1:4727", "http://[::1]:4727"} {
+		if validatePublicOrigin(true, origin) != nil {
+			t.Fatalf("rejected safe origin %q", origin)
+		}
+	}
+	if validatePublicOrigin(true, "http://fjord.habibi.tools") == nil {
+		t.Fatal("public credentials would travel without TLS")
+	}
+}

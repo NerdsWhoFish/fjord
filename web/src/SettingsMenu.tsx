@@ -1,4 +1,5 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { authSnapshot, forgetToken, isPublicMode, subscribeAuth } from "./auth";
 import { SessionManagement } from "./SessionManagement";
 import { ThemeToggle } from "./ThemeToggle";
 import "./settings-menu.css";
@@ -20,6 +21,7 @@ export function SettingsMenu({
   const menu = useRef<HTMLDetailsElement>(null);
   const trigger = useRef<HTMLElement>(null);
   const [manageSessions, setManageSessions] = useState(false);
+  const auth = useSyncExternalStore(subscribeAuth, authSnapshot, authSnapshot);
   useEffect(() => {
     const dismiss = (event: PointerEvent) => {
       if (
@@ -78,15 +80,41 @@ export function SettingsMenu({
         >
           <span className="eyebrow">APPEARANCE</span>
           <ThemeToggle />
-          <button
-            type="button"
-            onClick={() => {
-              if (menu.current) menu.current.open = false;
-              setManageSessions(true);
-            }}
-          >
-            Manage review sessions
-          </button>
+          {(!isPublicMode() || auth.status === "ready") && (
+            <button
+              type="button"
+              onClick={() => {
+                if (menu.current) menu.current.open = false;
+                setManageSessions(true);
+              }}
+            >
+              Manage review sessions
+            </button>
+          )}
+          {isPublicMode() && auth.status === "ready" && (
+            <section
+              className="github-connection"
+              aria-label="GitHub connection"
+            >
+              <span className="eyebrow">GITHUB</span>
+              <p>
+                Connected as <strong>{auth.login}</strong>
+              </p>
+              <button
+                type="button"
+                onClick={() => {
+                  if (
+                    window.confirm(
+                      "Forget your GitHub token and clear local review drafts?",
+                    )
+                  )
+                    forgetToken();
+                }}
+              >
+                Forget token
+              </button>
+            </section>
+          )}
           {diffMode && onDiffMode && (
             <label className="diff-mode-setting">
               Diff layout
@@ -127,6 +155,22 @@ export function SettingsMenu({
                 }
                 onFocus={(event) => event.currentTarget.select()}
               />
+              {isPublicMode() && (
+                <>
+                  <p>
+                    Authenticate your MCP client with the same GitHub token used
+                    in this browser. Each token can access only its own review
+                    sessions. Browser updates can take up to 10 seconds.
+                  </p>
+                  <label htmlFor="mcp-auth-header">Request header</label>
+                  <input
+                    id="mcp-auth-header"
+                    readOnly
+                    value="Authorization: Bearer <your GitHub token>"
+                    onFocus={(event) => event.currentTarget.select()}
+                  />
+                </>
+              )}
               {session.id && (
                 <p className="mcp-session-id">
                   Review session: <code>{session.id}</code>

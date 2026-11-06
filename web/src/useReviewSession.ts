@@ -9,6 +9,7 @@ import {
   type SessionState,
 } from "./session-client";
 import { captureError } from "./telemetry";
+import { isPublicMode } from "./auth";
 
 export function useReviewSession({
   pr,
@@ -40,6 +41,7 @@ export function useReviewSession({
     const session = bindSessionLifecycle(window, () =>
       startReviewSession({
         pr,
+        pollInterval: isPublicMode() ? 10_000 : 2000,
         snapshot: () => {
           if (latest.current.key !== key)
             throw new Error("The pull request changed.");

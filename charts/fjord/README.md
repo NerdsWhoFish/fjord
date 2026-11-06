@@ -16,6 +16,7 @@ Create a GitHub token Secret separately; never put tokens in Helm values. Defaul
 | Value | Default | Use |
 | --- | --- | --- |
 | `publicURL` | `http://localhost:4727` | Exact browser-facing origin |
+| `publicMode` | `false` | Require each visitor's GitHub token; omit the shared GitHub secret |
 | `github.existingSecret` / `tokenKey` | `fjord-github` / `token` | GitHub token Secret |
 | `image.tag` / `digest` | Chart app version / empty | Pin an image; digest takes precedence |
 | `sandbox.seccompProfile` | `profiles/fjord.json` | Profile installed on each eligible node |
@@ -29,3 +30,5 @@ Create a GitHub token Secret separately; never put tokens in Helm values. Defaul
 | `temporaryStorage.sizeLimit` | `6Gi` | Ephemeral workspace storage limit |
 
 See [values.yaml](values.yaml) for scheduling, resource, and image settings. Review sessions stay in memory: the chart fixes the deployment at one replica with `Recreate` upgrades. A PVC does not preserve sessions.
+
+For public hosting, set `publicMode: true` and an HTTPS `publicURL`. Visitors save their tokens in their own browser. The pod does not receive `GH_TOKEN`, even if `github.existingSecret` is set. Shared private module caches are prohibited in this mode.

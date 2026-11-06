@@ -1,6 +1,6 @@
 # Kubernetes
 
-The [Fjord Helm chart](../charts/fjord) deploys the public container image, its bundled language servers, and a ClusterIP service. Ingress is optional. Fjord has no login: use a trusted network or an authenticating proxy.
+The [Fjord Helm chart](../charts/fjord) deploys the public container image, its bundled language servers, and a ClusterIP service. Ingress is optional. Default mode shares the server's GitHub identity and requires a trusted network. Public mode uses each visitor's token.
 
 ## Prepare the nodes
 
@@ -45,6 +45,25 @@ telemetry:
 ```
 
 Provision DNS, TLS, and access restrictions separately. The proxy must preserve the configured Host header. Probes send that same header automatically.
+
+## Public hosting
+
+Deploy a separate instance with HTTPS and no GitHub Secret:
+
+```yaml
+publicURL: https://review.example.com
+publicMode: true
+github:
+  existingSecret: ""
+```
+
+Visitors enter a GitHub personal access token. For fine-grained tokens, select the reviewed repositories and grant **Contents: read** and **Pull requests: read and write**. Organization approval may be required. The token stays in browser local storage and is sent over HTTPS to Fjord for GitHub requests. **Forget GitHub token** clears it and the browser's public review drafts.
+
+Public mode isolates sessions and workspaces by credential and rechecks GitHub access before returning cached code. Tokens are not persisted on the server. Capacity is bounded; idle workspaces expire. Custom language-server profiles and shared private module caches are disabled in this mode.
+
+For MCP, connect to `https://review.example.com/mcp` with `Authorization: Bearer <your GitHub token>`, using the same token as the browser. It sees only that token's review sessions. Store the token through your MCP client's secret or environment-variable support. MCP changes remain drafts for you to review and submit.
+
+Only use a hosted instance you trust: its JavaScript and backend handle your token. Run your own instance when repository policy requires it. The executable supports the same mode through `FJORD_PUBLIC_MODE=true`.
 
 ## Configuration and upgrades
 

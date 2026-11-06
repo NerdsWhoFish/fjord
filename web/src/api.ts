@@ -1,3 +1,5 @@
+import { authenticatedFetch } from "./auth";
+
 export async function api<T>(
   endpoint: string,
   body: unknown = {},
@@ -10,7 +12,7 @@ export async function api<T>(
     );
   let response: Response;
   try {
-    response = await fetch(`/api/${endpoint}`, {
+    response = await authenticatedFetch(`/api/${endpoint}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(body),

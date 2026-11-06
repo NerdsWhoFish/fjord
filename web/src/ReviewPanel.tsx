@@ -17,6 +17,7 @@ import { ConversationTimeline } from "./ConversationTimeline";
 import { MarkdownContent } from "./MarkdownContent";
 import { MarkdownEditor } from "./MarkdownEditor";
 import { reviewRestriction } from "./review-policy";
+import { credentialID, isPublicMode } from "./auth";
 
 export interface ReviewDraft {
   comments: DraftComment[];
@@ -61,7 +62,7 @@ export function canSubmitReview(
 }
 
 export function draftKey(pr: PullRequest, demo: boolean) {
-  return `fjord:${demo ? "demo:" : ""}${pr.owner}/${pr.repo}/${pr.number}/${pr.baseSHA}/${pr.headSHA}`;
+  return `fjord:${isPublicMode() ? `public:${credentialID()}:` : ""}${demo ? "demo:" : ""}${pr.owner}/${pr.repo}/${pr.number}/${pr.baseSHA}/${pr.headSHA}`;
 }
 
 export function readDraft(pr: PullRequest, demo: boolean): ReviewDraft {

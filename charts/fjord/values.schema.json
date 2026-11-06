@@ -27,12 +27,13 @@
       }
     },
     "publicURL": { "type": "string", "pattern": "^https?://[^/]+/?$" },
+    "publicMode": { "type": "boolean" },
     "github": {
       "type": "object",
       "additionalProperties": false,
       "required": ["existingSecret", "tokenKey"],
       "properties": {
-        "existingSecret": { "type": "string", "minLength": 1 },
+        "existingSecret": { "type": "string" },
         "tokenKey": { "type": "string", "minLength": 1 }
       }
     },
