@@ -182,6 +182,7 @@ func TestRejectUnsafeOrUnusableValues(t *testing.T) {
 		"headers without endpoint":   "telemetry.existingSecret=telemetry",
 		"invalid digest":             "image.digest=sha256:not-a-digest",
 		"public shared module cache": "publicMode=true,goModuleCache.existingClaim=private-modules",
+		"public custom profiles":     "publicMode=true,languageServers.existingConfigMap=private-runtime",
 	} {
 		t.Run(name, func(t *testing.T) {
 			if output, err := helm(t, "template", "review", "..", "--set", values); err == nil {

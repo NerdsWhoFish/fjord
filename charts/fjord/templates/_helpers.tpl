@@ -37,6 +37,9 @@ app.kubernetes.io/managed-by: {{ .Release.Service }}
 {{- if and .Values.publicMode .Values.goModuleCache.existingClaim -}}
 {{- fail "publicMode must not mount a shared Go module cache that could contain private dependencies" -}}
 {{- end -}}
+{{- if and .Values.publicMode .Values.languageServers.existingConfigMap -}}
+{{- fail "publicMode uses bundled language servers and does not allow custom runtime mounts" -}}
+{{- end -}}
 {{- $url := urlParse .Values.publicURL -}}
 {{- if or (not (has $url.scheme (list "http" "https"))) (not $url.host) $url.userinfo $url.query $url.fragment (and $url.path (ne $url.path "/")) -}}
 {{- fail "publicURL must be an http(s) origin without credentials, query, fragment, or path" -}}

@@ -59,7 +59,9 @@ github:
 
 Visitors enter a GitHub personal access token. For fine-grained tokens, select the reviewed repositories and grant **Contents: read** and **Pull requests: read and write**. Organization approval may be required. The token stays in browser local storage and is sent over HTTPS to Fjord for GitHub requests. **Forget GitHub token** clears it and the browser's public review drafts.
 
-Public mode isolates workspaces by credential and rechecks GitHub access before returning cached code. Tokens are not persisted on the server. Capacity is bounded; idle workspaces expire. MCP, custom language-server profiles, and shared private module caches are disabled in this mode.
+Public mode isolates sessions and workspaces by credential and rechecks GitHub access before returning cached code. Tokens are not persisted on the server. Capacity is bounded; idle workspaces expire. Custom language-server profiles and shared private module caches are disabled in this mode.
+
+For MCP, connect to `https://review.example.com/mcp` with `Authorization: Bearer <your GitHub token>`, using the same token as the browser. It sees only that token's review sessions. Store the token through your MCP client's secret or environment-variable support. MCP changes remain drafts for you to review and submit.
 
 Only use a hosted instance you trust: its JavaScript and backend handle your token. Run your own instance when repository policy requires it. The executable supports the same mode through `FJORD_PUBLIC_MODE=true`.
 

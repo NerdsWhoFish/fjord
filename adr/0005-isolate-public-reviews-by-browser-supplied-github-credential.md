@@ -4,7 +4,7 @@ Date: 2026-11-06
 
 ## Status
 
-Accepted.
+Accepted. Amended, see [Amendments](#amendments).
 
 ## Context and Problem Statement
 
@@ -42,3 +42,9 @@ Add an explicit public mode that receives bearer tokens on same-origin API reque
 
 - Adding tokens to shared stores leaves ownership and cached source boundaries unsafe.
 - Per-visitor Kubernetes workloads add lifecycle and infrastructure complexity beyond the bounded initial service.
+
+## Amendments
+
+### 2026-11-06: Include authenticated MCP in the public rollout
+
+The requested initial rollout now includes authenticated MCP. A native MCP client supplies the same GitHub bearer token as its browser session. The credential boundary applies to session discovery, cached PR snapshots, draft actions, and code navigation. Current GitHub permission checks precede cached reads. Native clients may omit Origin; supplied origins must match. This fulfills the authenticated-client prerequisite in the original decision, so public MCP is available in the initial release. Browser polling is less frequent in public mode to bound authorization API usage; browser display of MCP actions can consequently take longer. No MCP tool submits a GitHub review.
