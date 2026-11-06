@@ -163,7 +163,7 @@ func TestFaroEnvelopeDropsPrivateContent(t *testing.T) {
 			t.Fatalf("leaked %s in %s", forbidden, text)
 		}
 	}
-	if !strings.Contains(text, "navigate") || !strings.Contains(text, "LCP") {
+	if !strings.Contains(text, "navigate") || !strings.Contains(text, `"lcp":25`) {
 		t.Fatal("dropped safe signals")
 	}
 	if !strings.Contains(text, `"environment":"production"`) {
