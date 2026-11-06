@@ -4,8 +4,22 @@ import { renderToStaticMarkup } from "react-dom/server";
 beforeEach(() => {
   vi.resetModules();
   vi.stubGlobal("__FJORD_CONFIG__", { publicMode: true });
+  vi.stubGlobal("location", new URL("https://fjord.example"));
 });
 afterEach(() => vi.unstubAllGlobals());
+
+it("disables token entry and explains HTTPS on an insecure public origin", async () => {
+  vi.stubGlobal("location", new URL("http://fjord.example"));
+  const { PublicAccess } = await import("./PublicAccess");
+  const html = renderToStaticMarkup(
+    <PublicAccess>
+      <p>Private pull request</p>
+    </PublicAccess>,
+  );
+  expect(html).not.toContain("Private pull request");
+  expect(html).toMatch(/<input[^>]+disabled=""/);
+  expect(html).toContain("Open Fjord over HTTPS");
+});
 
 it("gates review content behind a password field with storage disclosure", async () => {
   const { PublicAccess } = await import("./PublicAccess");
