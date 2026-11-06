@@ -80,6 +80,26 @@ describe("browser GitHub credentials", () => {
     expect(request).not.toHaveBeenCalled();
     expect(local.has(key)).toBe(false);
   });
+  it("forgets an unvalidated saved token on HTTP without reading or transmitting it", async () => {
+    local.set(
+      key,
+      JSON.stringify({
+        token,
+        id: "11111111-1111-1111-1111-111111111111",
+      }),
+    );
+    const getItem = vi.fn();
+    vi.stubGlobal("localStorage", {
+      getItem,
+      removeItem: (name: string) => local.delete(name),
+    });
+    vi.stubGlobal("location", new URL("http://fjord.example"));
+    const auth = await import("./auth");
+    auth.forgetToken();
+    expect(getItem).not.toHaveBeenCalled();
+    expect(request).not.toHaveBeenCalled();
+    expect(local.has(key)).toBe(false);
+  });
   it("validates before persisting or enabling API access", async () => {
     const auth = await import("./auth");
     await expect(auth.authenticatedFetch("/api/pr", {})).rejects.toThrow(
