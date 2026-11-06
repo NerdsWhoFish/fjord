@@ -48,6 +48,9 @@ type Config struct {
 	Navigation Navigation
 	FaroURL    string
 	Version    string
+	PublicMode bool
+	// PublicNavigation creates an independent sandbox manager per credential.
+	PublicNavigation func() ManagedNavigation
 }
 type Server struct {
 	config   Config
@@ -67,11 +70,16 @@ var identifier = regexp.MustCompile(`^[A-Za-z0-9_.-]+$`)
 var shaPattern = regexp.MustCompile(`^[a-fA-F0-9]{40}$`)
 
 func New(c Config) http.Handler {
+	if c.PublicMode {
+		return newPublicHandler(c)
+	}
+	return newHandler(c)
+}
+
+func newHandler(c Config) http.Handler {
 	if c.Origin == "" {
 		c.Origin = "http://" + c.Host
 	}
-	origin, host, originErr := PublicAddress(c.Origin)
-	validOrigin := originErr == nil && origin == c.Origin && host == c.Host
 	s := &Server{config: c, sessions: newSessionStore(), slots: make(chan struct{}, 8), mux: http.NewServeMux()}
 	s.route("/api/config", s.configHandler)
 	s.route("/api/pr", s.load)
@@ -96,13 +104,22 @@ func New(c Config) http.Handler {
 	}
 	s.mux.HandleFunc("GET /config.js", func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/javascript; charset=utf-8")
-		config, _ := json.Marshal(map[string]bool{"telemetryEnabled": c.FaroURL != ""})
+		config, _ := json.Marshal(map[string]bool{"telemetryEnabled": c.FaroURL != "", "publicMode": c.PublicMode})
 		_, _ = fmt.Fprintf(w, "globalThis.__FJORD_CONFIG__=%s;\n", config)
 	})
 	s.mux.HandleFunc("GET /healthz", func(w http.ResponseWriter, r *http.Request) { jsonReply(w, map[string]string{"status": "ok"}) })
 	if c.Assets != nil {
 		s.mux.Handle("GET /", staticHandler(c.Assets))
 	}
+	return secureHandler(c, s.mux)
+}
+
+func secureHandler(c Config, next http.Handler) http.Handler {
+	if c.Origin == "" {
+		c.Origin = "http://" + c.Host
+	}
+	origin, host, originErr := PublicAddress(c.Origin)
+	validOrigin := originErr == nil && origin == c.Origin && host == c.Host
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		// GitHub attachment URLs redirect to its dedicated user-asset bucket.
 		w.Header().Set("Content-Security-Policy", "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' https://github.com/user-attachments/ https://*.githubusercontent.com https://github-production-user-asset-6210df.s3.amazonaws.com; connect-src 'self'; frame-ancestors 'none'; base-uri 'none'; form-action 'self'")
@@ -114,7 +131,7 @@ func New(c Config) http.Handler {
 			http.Error(w, "invalid host", http.StatusForbidden)
 			return
 		}
-		s.mux.ServeHTTP(w, r)
+		next.ServeHTTP(w, r)
 	})
 }
 
@@ -155,7 +172,9 @@ func (s *Server) route(path string, fn func(http.ResponseWriter, *http.Request) 
 		if err := fn(w, r); err != nil {
 			span.SetStatus(codes.Error, "operation failed")
 			slog.ErrorContext(ctx, "request failed", "operation", path)
-			if errors.Is(err, errSessionRemoved) {
+			if errors.Is(err, errSessionAuthorization) {
+				jsonError(w, err.Error(), http.StatusForbidden)
+			} else if errors.Is(err, errSessionRemoved) {
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(http.StatusGone)
 				jsonReply(w, map[string]string{"error": err.Error(), "code": "session_removed"})
@@ -215,7 +234,7 @@ func (s *Server) configHandler(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(r, &in); err != nil {
 		return err
 	}
-	jsonReply(w, map[string]any{"telemetryEnabled": s.config.FaroURL != ""})
+	jsonReply(w, map[string]any{"telemetryEnabled": s.config.FaroURL != "", "publicMode": s.config.PublicMode})
 	return nil
 }
 func (s *Server) load(w http.ResponseWriter, r *http.Request) error {

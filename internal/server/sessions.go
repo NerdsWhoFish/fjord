@@ -404,6 +404,9 @@ func (s *Server) syncSession(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(r, &input); err != nil {
 		return err
 	}
+	if _, err := s.authorizedSession(r.Context(), input.ID); err != nil {
+		return err
+	}
 	session, err := s.sessions.sync(input.ID, input.Draft, input.Selection, input.Acknowledgements)
 	if err != nil {
 		return err
@@ -429,7 +432,11 @@ func (s *Server) listSessions(w http.ResponseWriter, r *http.Request) error {
 	if err := decode(r, &input); err != nil {
 		return err
 	}
-	jsonReply(w, map[string]any{"sessions": s.sessions.list()})
+	sessions, err := s.authorizedSessionList(r.Context())
+	if err != nil {
+		return err
+	}
+	jsonReply(w, map[string]any{"sessions": sessions})
 	return nil
 }
 

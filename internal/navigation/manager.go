@@ -84,12 +84,18 @@ type Manager struct {
 	closed     bool
 	profiles   []lspconfig.Profile
 	profileErr error
+	limit      int
 }
 
 func New() *Manager { return NewWithProfiles(lspconfig.Defaults()) }
 
 func NewWithProfiles(profiles []lspconfig.Profile) *Manager {
-	m := &Manager{workspaces: make(map[string]*workspace)}
+	return NewWithLimit(profiles, maxWorkspaces)
+}
+
+// NewWithLimit bounds sandbox processes and retained source trees per tenant.
+func NewWithLimit(profiles []lspconfig.Profile, limit int) *Manager {
+	m := &Manager{workspaces: make(map[string]*workspace), limit: min(max(limit, 1), maxWorkspaces)}
 	if err := lspconfig.Validate(profiles); err != nil {
 		m.profileErr = errors.New("invalid language-server profiles")
 		return m
@@ -201,7 +207,7 @@ func (m *Manager) Prepare(ctx context.Context, owner, repo, sha string, archive 
 		w.touched = time.Now()
 		return id, nil
 	}
-	if len(m.workspaces) >= maxWorkspaces && !m.evictIdle() {
+	if len(m.workspaces) >= m.limit && !m.evictIdle() {
 		return "", ErrCapacity
 	}
 	dir, err := os.MkdirTemp("", "fjord-navigation-")
