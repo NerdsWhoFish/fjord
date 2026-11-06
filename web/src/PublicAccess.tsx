@@ -4,6 +4,7 @@ import {
   connect,
   forgetToken,
   isPublicMode,
+  publicTokenOriginError,
   subscribeAuth,
 } from "./auth";
 import { SettingsMenu } from "./SettingsMenu";
@@ -12,7 +13,9 @@ import "./public-access.css";
 export function PublicAccess({ children }: { children: ReactNode }) {
   const auth = useSyncExternalStore(subscribeAuth, authSnapshot, authSnapshot);
   const [token, setToken] = useState("");
-  if (!isPublicMode() || auth.status === "ready") return children;
+  const originError = isPublicMode() ? publicTokenOriginError() : undefined;
+  if (!isPublicMode() || (auth.status === "ready" && !originError))
+    return children;
   const checking = auth.status === "checking";
   return (
     <div className="public-access">
@@ -67,10 +70,13 @@ export function PublicAccess({ children }: { children: ReactNode }) {
               placeholder="github_pat_..."
               required
               maxLength={255}
-              disabled={checking}
+              disabled={checking || !!originError}
               aria-describedby="token-storage"
             />
-            <button className="primary" disabled={checking || !token.trim()}>
+            <button
+              className="primary"
+              disabled={checking || !!originError || !token.trim()}
+            >
               {checking ? "Checking token..." : "Connect GitHub"}
             </button>
             {checking && (
@@ -79,9 +85,9 @@ export function PublicAccess({ children }: { children: ReactNode }) {
               </button>
             )}
             {checking && <p role="status">Verifying access with GitHub...</p>}
-            {auth.error && (
+            {(originError || auth.error) && (
               <p className="error" role="alert">
-                {auth.error}
+                {originError || auth.error}
               </p>
             )}
           </form>

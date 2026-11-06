@@ -17,6 +17,16 @@ let initialized = false;
 
 export const isPublicMode = () =>
   globalThis.__FJORD_CONFIG__?.publicMode === true;
+export function publicTokenOriginError(): string | undefined {
+  if (
+    typeof location !== "undefined" &&
+    (location.protocol === "https:" ||
+      (location.protocol === "http:" &&
+        ["localhost", "127.0.0.1", "[::1]"].includes(location.hostname)))
+  )
+    return;
+  return "Open Fjord over HTTPS before connecting your GitHub token. HTTP is allowed only on localhost.";
+}
 export const authSnapshot = () => state;
 export const credentialID = () => credential?.id || "signed-out";
 export function subscribeAuth(listener: () => void) {
@@ -66,6 +76,11 @@ function readCredential(): Credential | undefined {
 export function initializeAuth() {
   if (initialized || !isPublicMode()) return;
   initialized = true;
+  const originError = publicTokenOriginError();
+  if (originError) {
+    publish({ status: "signed-out", error: originError });
+    return;
+  }
   const saved = readCredential();
   if (saved) void connect(saved.token, saved);
   window.addEventListener("storage", (event) => {
@@ -89,6 +104,11 @@ export function initializeAuth() {
   });
 }
 export async function connect(token: string, saved?: Credential) {
+  const originError = publicTokenOriginError();
+  if (originError) {
+    publish({ status: "signed-out", error: originError });
+    return;
+  }
   token = token.trim();
   if (!/^[A-Za-z0-9_]{20,255}$/.test(token)) {
     publish({
@@ -166,7 +186,7 @@ export function forgetToken(message?: string) {
     /* Already unavailable. */
   }
   publish({ status: "signed-out", error: message });
-  if (previous)
+  if (previous && !publicTokenOriginError())
     void fetch("/api/auth/logout", {
       method: "POST",
       headers: {
@@ -184,6 +204,8 @@ export async function authenticatedFetch(
   init: RequestInit,
 ): Promise<Response> {
   if (!isPublicMode()) return fetch(url, init);
+  const originError = publicTokenOriginError();
+  if (originError) throw new Error(originError);
   const active = credential;
   const signal = controller.signal;
   if (!active || state.status !== "ready")

@@ -131,6 +131,9 @@ func secureHandler(c Config, next http.Handler) http.Handler {
 			http.Error(w, "invalid host", http.StatusForbidden)
 			return
 		}
+		if c.PublicMode && strings.HasPrefix(c.Origin, "https://") {
+			w.Header().Set("Strict-Transport-Security", "max-age=31536000")
+		}
 		next.ServeHTTP(w, r)
 	})
 }

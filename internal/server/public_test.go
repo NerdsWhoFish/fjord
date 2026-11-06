@@ -192,6 +192,9 @@ func TestPublicModeAuthenticationBoundary(t *testing.T) {
 		if response.Code != http.StatusOK {
 			t.Fatalf("public bootstrap %s requires authentication", path)
 		}
+		if response.Header().Get("Strict-Transport-Security") != "max-age=31536000" {
+			t.Fatal("public HTTPS bootstrap did not pin secure browser connections")
+		}
 		if path == "/config.js" && !strings.Contains(response.Body.String(), `"publicMode":true`) {
 			t.Fatal("bootstrap did not enable public mode")
 		}

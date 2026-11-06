@@ -36,10 +36,50 @@ beforeEach(() => {
   vi.stubGlobal("sessionStorage", storage(drafts));
   vi.stubGlobal("window", browser);
   vi.stubGlobal("__FJORD_CONFIG__", { publicMode: true });
+  vi.stubGlobal("location", new URL("https://fjord.example"));
 });
 afterEach(() => vi.unstubAllGlobals());
 
 describe("browser GitHub credentials", () => {
+  it("never reads or writes storage or sends tokens over non-loopback HTTP", async () => {
+    vi.stubGlobal("location", new URL("http://fjord.example"));
+    const getItem = vi.fn();
+    const setItem = vi.fn();
+    vi.stubGlobal("localStorage", { getItem, setItem });
+    const auth = await import("./auth");
+    auth.initializeAuth();
+    await auth.connect(token);
+    await expect(auth.authenticatedFetch("/api/pr", {})).rejects.toThrow(
+      "HTTPS",
+    );
+    expect(request).not.toHaveBeenCalled();
+    expect(getItem).not.toHaveBeenCalled();
+    expect(setItem).not.toHaveBeenCalled();
+    expect(auth.authSnapshot().error).toContain("HTTPS");
+    expect(auth.authSnapshot().error).not.toContain(token);
+  });
+  it.each(["localhost", "127.0.0.1", "[::1]"])(
+    "allows HTTP preview on %s",
+    async (host) => {
+      vi.stubGlobal("location", new URL(`http://${host}:4727`));
+      const auth = await import("./auth");
+      await auth.connect(token);
+      expect(auth.authSnapshot().status).toBe("ready");
+      expect(request).toHaveBeenCalledTimes(1);
+    },
+  );
+  it("never sends a saved token in a logout or API call on an insecure origin", async () => {
+    const auth = await import("./auth");
+    await auth.connect(token);
+    request.mockClear();
+    vi.stubGlobal("location", new URL("http://192.168.1.2:4727"));
+    await expect(auth.authenticatedFetch("/api/pr", {})).rejects.toThrow(
+      "HTTPS",
+    );
+    auth.forgetToken();
+    expect(request).not.toHaveBeenCalled();
+    expect(local.has(key)).toBe(false);
+  });
   it("validates before persisting or enabling API access", async () => {
     const auth = await import("./auth");
     await expect(auth.authenticatedFetch("/api/pr", {})).rejects.toThrow(
