@@ -91,30 +91,35 @@ export function SettingsMenu({
               Manage review sessions
             </button>
           )}
-          {isPublicMode() && auth.status === "ready" && (
-            <section
-              className="github-connection"
-              aria-label="GitHub connection"
-            >
-              <span className="eyebrow">GITHUB</span>
-              <p>
-                Connected as <strong>{auth.login}</strong>
-              </p>
-              <button
-                type="button"
-                onClick={() => {
-                  if (
-                    window.confirm(
-                      "Forget your GitHub token and clear local review drafts?",
-                    )
-                  )
-                    forgetToken();
-                }}
+          {isPublicMode() &&
+            (auth.status === "ready" || auth.hasSavedCredential) && (
+              <section
+                className="github-connection"
+                aria-label="GitHub connection"
               >
-                Forget token
-              </button>
-            </section>
-          )}
+                <span className="eyebrow">GITHUB</span>
+                {auth.status === "ready" ? (
+                  <p>
+                    Connected as <strong>{auth.login}</strong>
+                  </p>
+                ) : (
+                  <p>A GitHub token is saved in this browser.</p>
+                )}
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (
+                      window.confirm(
+                        "Forget your GitHub token and clear local review drafts?",
+                      )
+                    )
+                      forgetToken();
+                  }}
+                >
+                  Forget token
+                </button>
+              </section>
+            )}
           {diffMode && onDiffMode && (
             <label className="diff-mode-setting">
               Diff layout

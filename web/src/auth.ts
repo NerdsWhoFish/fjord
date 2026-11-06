@@ -7,10 +7,16 @@ export interface AuthState {
   status: "signed-out" | "checking" | "ready";
   login?: string;
   error?: string;
+  hasSavedCredential: boolean;
   revision: number;
 }
 let credential: Credential | undefined;
-let state: AuthState = { status: "signed-out", revision: 0 };
+let hasSavedCredential = false;
+let state: AuthState = {
+  status: "signed-out",
+  hasSavedCredential,
+  revision: 0,
+};
 let controller = new AbortController();
 const listeners = new Set<() => void>();
 let initialized = false;
@@ -35,8 +41,8 @@ export function subscribeAuth(listener: () => void) {
     listeners.delete(listener);
   };
 }
-function publish(next: Omit<AuthState, "revision">) {
-  state = { ...next, revision: state.revision + 1 };
+function publish(next: Omit<AuthState, "revision" | "hasSavedCredential">) {
+  state = { ...next, hasSavedCredential, revision: state.revision + 1 };
   listeners.forEach((listener) => listener());
 }
 function clearDrafts(preserveID?: string) {
@@ -82,12 +88,15 @@ export function initializeAuth() {
     return;
   }
   const saved = readCredential();
+  hasSavedCredential = !!saved;
   if (saved) void connect(saved.token, saved);
   window.addEventListener("storage", (event) => {
     if (event.key !== storageKey && event.key !== null) return;
     const next = readCredential();
+    hasSavedCredential = !!next;
     if (
       state.status !== "checking" &&
+      state.hasSavedCredential === hasSavedCredential &&
       next?.id === credential?.id &&
       next?.token === credential?.token
     )
@@ -99,6 +108,7 @@ export function initializeAuth() {
   window.addEventListener("pageshow", (event) => {
     if (!(event as PageTransitionEvent).persisted) return;
     const saved = readCredential();
+    hasSavedCredential = !!saved;
     if (saved) void connect(saved.token, saved);
     else forgetToken();
   });
@@ -142,6 +152,7 @@ export async function connect(token: string, saved?: Credential) {
       if (response.status === 401) {
         try {
           localStorage.removeItem(storageKey);
+          hasSavedCredential = false;
         } catch {
           /* Already unavailable. */
         }
@@ -159,6 +170,7 @@ export async function connect(token: string, saved?: Credential) {
     const next = saved || { token, id: crypto.randomUUID() };
     try {
       localStorage.setItem(storageKey, JSON.stringify(next));
+      hasSavedCredential = true;
     } catch {
       publish({
         status: "signed-out",
@@ -178,15 +190,17 @@ export async function connect(token: string, saved?: Credential) {
   }
 }
 export function forgetToken(message?: string) {
-  const previous = credential;
+  const secureOrigin = !publicTokenOriginError();
+  const previous = credential || (secureOrigin ? readCredential() : undefined);
   replaceCredential();
   try {
     localStorage.removeItem(storageKey);
+    hasSavedCredential = false;
   } catch {
     /* Already unavailable. */
   }
   publish({ status: "signed-out", error: message });
-  if (previous && !publicTokenOriginError())
+  if (previous && secureOrigin)
     void fetch("/api/auth/logout", {
       method: "POST",
       headers: {
