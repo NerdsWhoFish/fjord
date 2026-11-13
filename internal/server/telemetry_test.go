@@ -23,6 +23,9 @@ func TestFaroRelayAcceptsSDKLifecycleAndVitalsWithoutBrowserMetadata(t *testing.
 		if r.Header.Get("Authorization") != "" || r.Header.Get("Cookie") != "" {
 			t.Error("relay forwarded browser credentials")
 		}
+		if r.Header.Get("Origin") != "https://fjord.example" {
+			t.Error("collector origin does not match the configured application")
+		}
 		body, _ := io.ReadAll(r.Body)
 		deliveries <- body
 		w.WriteHeader(http.StatusAccepted)
@@ -49,6 +52,13 @@ func TestFaroRelayAcceptsSDKLifecycleAndVitalsWithoutBrowserMetadata(t *testing.
 	request.Header.Set("Content-Type", "application/json")
 	request.Header.Set("Authorization", "Bearer "+publicTokenA)
 	request.Header.Set("Cookie", "private-cookie=private-value")
+	request.Header.Set("Origin", "https://untrusted.example")
+	rejected := httptest.NewRecorder()
+	handler.ServeHTTP(rejected, request)
+	if rejected.Code != http.StatusForbidden || len(deliveries) != 0 {
+		t.Fatal("untrusted origin reached collector")
+	}
+	request.Header.Set("Origin", "https://fjord.example")
 	response := httptest.NewRecorder()
 	handler.ServeHTTP(response, request)
 	if response.Code != http.StatusAccepted {

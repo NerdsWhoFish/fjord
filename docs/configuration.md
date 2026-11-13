@@ -158,6 +158,8 @@ W3C TraceContext and Baggage are supported. The browser relay allowlists error, 
 
 ## Development
 
+The Faro relay sends the configured application origin upstream for origin-restricted collector admission. It never forwards browser credentials, session identifiers or incoming Origin values. Browsers continue sending to the same-origin `/api/telemetry` endpoint, so switching the server's collector URL requires no new browser CSP destination. Deploy the compatible relay before switching to a collector that requires Origin.
+
 `web/` contains React/TypeScript; Go packages separate GitHub, navigation, telemetry, and HTTP services. MCP reuses those services.
 
 | Command | Runs |

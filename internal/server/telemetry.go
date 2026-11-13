@@ -101,6 +101,8 @@ func (s *Server) telemetry(w http.ResponseWriter, r *http.Request) error {
 		return errors.New("invalid telemetry configuration")
 	}
 	req.Header.Set("Content-Type", "application/json")
+	// Bind collector admission to the configured app, never a forwarded header.
+	req.Header.Set("Origin", s.config.Origin)
 	var id [16]byte
 	if _, err = rand.Read(id[:]); err != nil {
 		return errors.New("telemetry identifier unavailable")
